@@ -1,0 +1,30 @@
+{
+  "name": "sshby",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tarayıcıdan Linux sunucularına SSH, SFTP ve Elasticsearch denetimi",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm --filter @sshby/shared build && pnpm --filter @sshby/api build && pnpm --filter @sshby/web build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "pnpm -r test",
+    "db:diff": "pnpm --filter @sshby/api db:diff",
+    "db:migrate": "pnpm --filter @sshby/api db:migrate",
+    "compose:up": "docker compose -f deploy/compose/docker-compose.yml up -d --build",
+    "compose:down": "docker compose -f deploy/compose/docker-compose.yml down",
+    "compose:logs": "docker compose -f deploy/compose/docker-compose.yml logs -f api web"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "eslint": "^9.14.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.13.0"
+  }
+}

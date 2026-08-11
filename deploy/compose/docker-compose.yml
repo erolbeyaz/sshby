@@ -1,0 +1,141 @@
+# sshby — yerel geliştirme ve deneme ortamı.
+#
+#   docker compose -f deploy/compose/docker-compose.yml up -d --build
+#   → http://localhost:8088
+#
+# Bu dosya YALNIZCA geliştirme içindir: Elasticsearch güvenliği kapalı, parolalar
+# sabit. Üretim için deploy/helm/sshby kullanılır.
+#
+# Host portları çakışırsa aynı dizinde bir .env dosyası açıp değiştirin:
+#   SSHBY_WEB_PORT=9090
+# Konteynerler birbirine servis adıyla ulaşır; bu portlar yalnızca host'tan
+# erişim içindir ve hepsi 127.0.0.1'e bağlanır (dışarı açılmaz).
+
+name: sshby
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sshby
+      POSTGRES_PASSWORD: sshby
+      POSTGRES_DB: sshby
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sshby -d sshby']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - '127.0.0.1:${SSHBY_POSTGRES_PORT:-15432}:5432'
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      # Geliştirme kolaylığı için TLS ve kimlik doğrulama kapalı. Üretimde asla.
+      xpack.security.enabled: 'false'
+      ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+    volumes:
+      - elastic-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs http://localhost:9200/_cluster/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    ports:
+      - '127.0.0.1:${SSHBY_ELASTIC_PORT:-19200}:9200'
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${SSHBY_KIBANA_PORT:-5601}:5601'
+
+  # Uçtan uca denemeler için gerçek bir SSH hedefi.
+  # Kullanıcı: sshby / parola: sshby / port: 2222
+  test-ssh:
+    # Üreticinin önerdiği lscr.io kayıt defteri kurumsal ağdan 403 dönüyor;
+    # Docker Hub'daki aynı imaj kullanılıyor.
+    image: docker.io/linuxserver/openssh-server:latest
+    restart: unless-stopped
+    environment:
+      PUID: '1000'
+      PGID: '1000'
+      TZ: Europe/Istanbul
+      USER_NAME: sshby
+      PASSWORD_ACCESS: 'true'
+      USER_PASSWORD: sshby
+      SUDO_ACCESS: 'true'
+    ports:
+      - '127.0.0.1:${SSHBY_TEST_SSH_PORT:-2222}:2222'
+
+  # Şemayı uygulayıp çıkan tek seferlik iş. api bunun başarıyla bitmesini bekler,
+  # böylece uygulama hiçbir zaman eksik şemayla açılmaz.
+  migrate:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    command: ['node', 'apps/api/dist/db/migrate.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://sshby:sshby@postgres:5432/sshby
+      # migrate de env doğrulamasından geçtiği için bu iki değer burada da gerekli.
+      SSHBY_MASTER_KEY: ${SSHBY_MASTER_KEY:-ZGV2LW9ubHktbWFzdGVyLWtleS0zMi1ieXRlcyEhISE=}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-en-az-32-karakter-uzunlugunda}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: '3000'
+      DATABASE_URL: postgres://sshby:sshby@postgres:5432/sshby
+      SSHBY_MASTER_KEY: ${SSHBY_MASTER_KEY:-ZGV2LW9ubHktbWFzdGVyLWtleS0zMi1ieXRlcyEhISE=}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-en-az-32-karakter-uzunlugunda}
+      PUBLIC_ORIGIN: http://localhost:${SSHBY_WEB_PORT:-8088}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${SSHBY_WEB_PORT:-8088}:8080'
+
+volumes:
+  postgres-data:
+  elastic-data:

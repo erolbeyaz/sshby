@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" width="420" height="96" role="img" aria-label="sshby.dev">
+  <g transform="translate(0,8)">
+    <rect width="80" height="80" rx="19" fill="#10B981"/>
+    <path d="M16.3 24.4 L31.9 40 L16.3 55.6" fill="none" stroke="#08201A" stroke-width="6.25" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="#08201A">
+      <rect x="38.8" y="52.5" width="13.8" height="6.25" rx="3.1"/>
+      <rect x="56.3" y="52.5" width="5" height="6.25" rx="2.5" opacity="0.55"/>
+      <rect x="64.4" y="52.5" width="2.5" height="6.25" rx="1.25" opacity="0.28"/>
+    </g>
+  </g>
+  <text x="102" y="62" font-family="'JetBrains Mono','IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" font-size="46" font-weight="800" letter-spacing="-1" fill="#F3F3F3">sshby</text>
+  <text x="272" y="62" font-family="'JetBrains Mono','IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" font-size="46" font-weight="800" letter-spacing="-1" fill="#8A8A8A">.dev</text>
+  <rect x="382" y="30" width="20" height="38" rx="3" fill="#10B981"/>
+</svg>

@@ -1,0 +1,82 @@
+# syntax=docker/dockerfile:1.7
+#
+# sshby API imajı. Build bağlamı depo köküdür:
+#   docker build -f deploy/docker/Dockerfile.api .
+#
+# Alpine yerine bookworm-slim: glibc üzerinde native paketlerin hazır derlemesi
+# sorunsuz iniyor, musl'da derleyici kurmak gerekiyordu.
+
+ARG NODE_IMAGE=node:22-bookworm-slim
+
+# -------------------------------------------------------------------- temel
+FROM ${NODE_IMAGE} AS base
+# Kurumsal ağda TLS trafiği bir güvenlik ağ geçidi tarafından kesiliyor; konteyner
+# içindeki Node bu ara sertifikayı tanımadığı için npm registry'ye bağlanamıyor.
+# node imajında sistem CA deposu yok (Node kendi gömülü kök listesini kullanır),
+# bu yüzden update-ca-certificates yerine NODE_EXTRA_CA_CERTS kullanıyoruz.
+COPY deploy/docker/certs/corporate-ca.crt /etc/ssl/sshby-extra-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/sshby-extra-ca.crt
+
+# ------------------------------------------------------------------ bağımlılık
+FROM base AS deps
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+WORKDIR /app
+
+# Yalnızca manifest'leri kopyala: kaynak değiştiğinde bu katman yeniden çalışmaz.
+COPY package.json pnpm-workspace.yaml .npmrc ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/shared/package.json packages/shared/
+# Lockfile ilk build'den önce depoda olmayabilir; varsa kullanılır.
+COPY pnpm-lock.yaml* ./
+
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --no-frozen-lockfile
+
+# ----------------------------------------------------------------------- build
+FROM deps AS build
+ARG APP_VERSION=0.1.0-dev
+ENV APP_VERSION=${APP_VERSION}
+WORKDIR /app
+
+COPY tsconfig.base.json ./
+COPY packages/shared ./packages/shared
+COPY apps/api ./apps/api
+
+RUN pnpm --filter @sshby/shared build \
+ && pnpm --filter @sshby/api build
+
+# Derleme sonrası geliştirme bağımlılıklarını at.
+RUN pnpm prune --prod
+
+# ---------------------------------------------------------------------- runner
+FROM base AS runner
+ARG APP_VERSION=0.1.0-dev
+ENV NODE_ENV=production \
+    APP_VERSION=${APP_VERSION} \
+    PORT=3000 \
+    HOST=0.0.0.0
+WORKDIR /app
+
+# node imajındaki hazır `node` kullanıcısı (uid 1000) — root'la çalışmıyoruz.
+RUN mkdir -p /app && chown -R node:node /app
+USER node
+
+COPY --from=build --chown=node:node /app/node_modules            ./node_modules
+COPY --from=build --chown=node:node /app/package.json            ./package.json
+COPY --from=build --chown=node:node /app/packages/shared/dist    ./packages/shared/dist
+COPY --from=build --chown=node:node /app/packages/shared/package.json ./packages/shared/package.json
+# Çalışma alanı paketleri (@sshby/shared) kök node_modules'a hoist edilmez;
+# bağımlı paketin kendi node_modules'ında sembolik bağ olarak durur.
+COPY --from=build --chown=node:node /app/apps/api/node_modules   ./apps/api/node_modules
+COPY --from=build --chown=node:node /app/apps/api/dist           ./apps/api/dist
+COPY --from=build --chown=node:node /app/apps/api/migrations     ./apps/api/migrations
+COPY --from=build --chown=node:node /app/apps/api/package.json   ./apps/api/package.json
+
+EXPOSE 3000
+
+# Uzun ömürlü SSH oturumlarının zarifçe kapanabilmesi için sinyal doğrudan
+# node sürecine ulaşmalı — araya kabuk koymuyoruz.
+STOPSIGNAL SIGTERM
+CMD ["node", "apps/api/dist/server.js"]

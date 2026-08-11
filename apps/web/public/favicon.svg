@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="sshby">
+  <!-- Marka kuralı: favicon ölçeğinde yalnızca chevron ve tek tam alt çizgi kullanılır;
+       sönümlenen iz bu boyutta okunmuyor. -->
+  <rect width="256" height="256" rx="60" fill="#10B981"/>
+  <path d="M52 78 L102 128 L52 178" fill="none" stroke="#08201A" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="124" y="166" width="60" height="24" rx="12" fill="#08201A"/>
+</svg>

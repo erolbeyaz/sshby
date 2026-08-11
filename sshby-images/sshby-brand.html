@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sshby — Marka Panosu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#181818;
+    --surface:#1E1E1E;
+    --surface-2:#232323;
+    --line:#2A2A2A;
+    --fg:#F3F3F3;
+    --fg-dim:#8A8A8A;
+    --accent:#10B981;
+    --trace:#6E5AE6;
+    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);
+    font-family:var(--sans);font-size:15px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:64px 28px 96px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--fg-dim);margin:0 0 10px
+  }
+  h1{font-size:34px;font-weight:600;letter-spacing:-.02em;margin:0 0 8px}
+  .lede{color:var(--fg-dim);max-width:56ch;margin:0}
+  section{margin-top:64px;padding-top:32px;border-top:1px solid var(--line)}
+  section:first-of-type{border-top:none}
+  h2{font-size:13px;font-family:var(--mono);font-weight:500;letter-spacing:.14em;
+     text-transform:uppercase;color:var(--fg-dim);margin:0 0 24px}
+  h3{font-size:15px;font-weight:600;margin:0 0 6px}
+  p{margin:0 0 12px}
+  .note{color:var(--fg-dim);font-size:13.5px}
+
+  /* --- logo --- */
+  .logos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+        padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:22px}
+  .tile.light{background:#F3F3F3;border-color:#E0E0E0}
+  .tile .cap{font-family:var(--mono);font-size:11px;color:var(--fg-dim);letter-spacing:.08em}
+  .tile.light .cap{color:#6B6B6B}
+
+  .lockup{display:flex;align-items:center;gap:16px}
+  .word{font-family:var(--mono);font-weight:800;font-size:30px;letter-spacing:-.03em}
+  .word .tld{color:var(--fg-dim)}
+  .light .word .tld{color:#9A9A9A}
+  .caret{display:inline-block;width:12px;height:24px;border-radius:2px;
+         background:var(--accent);vertical-align:-3px;margin-left:6px;
+         animation:blink 1.2s steps(1,end) infinite}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.caret{animation:none}}
+
+  /* --- palette --- */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .sw{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sw .chip{height:84px}
+  .sw .meta{padding:12px 14px;background:var(--surface)}
+  .sw .name{font-size:13px;font-weight:600}
+  .sw .hex{font-family:var(--mono);font-size:12px;color:var(--fg-dim)}
+  .sw .use{font-size:12px;color:var(--fg-dim);margin-top:4px;line-height:1.4}
+
+  /* --- type --- */
+  .type-row{border:1px solid var(--line);border-radius:12px;background:var(--surface);
+            padding:22px 24px;margin-bottom:12px}
+  .type-row .label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+                   text-transform:uppercase;color:var(--fg-dim);margin-bottom:12px}
+  .spec-display{font-family:var(--mono);font-weight:800;font-size:38px;letter-spacing:-.03em}
+  .spec-body{font-family:var(--sans);font-size:19px;font-weight:500}
+  .spec-data{font-family:var(--mono);font-size:14px;color:var(--accent)}
+
+  /* --- ui mock --- */
+  .app{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+  .topbar{display:flex;align-items:center;gap:14px;padding:10px 14px;
+          border-bottom:1px solid var(--line);background:var(--surface-2)}
+  .topbar .mini{width:22px;height:22px;border-radius:6px;background:var(--accent);
+                display:grid;place-items:center;color:#08201A;font-family:var(--mono);
+                font-weight:800;font-size:12px}
+  .topbar .name{font-family:var(--mono);font-weight:800;font-size:13px;letter-spacing:-.02em}
+  .topbar .spacer{flex:1}
+  .pill{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:999px;
+        border:1px solid var(--line);color:var(--fg-dim)}
+  .pill.live{color:var(--trace);border-color:rgba(110,90,230,.4)}
+  .pill.live::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
+                     background:var(--trace);margin-right:6px;vertical-align:1px}
+  .body{display:grid;grid-template-columns:210px 1fr}
+  .side{border-right:1px solid var(--line);padding:12px 8px;background:var(--surface)}
+  .side .grp{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+             color:var(--fg-dim);padding:8px 10px 6px}
+  .host{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;
+        font-family:var(--mono);font-size:12.5px;color:var(--fg-dim)}
+  .host.on{background:var(--surface-2);color:var(--fg)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .dot.off{background:#4A4A4A}
+  .term{padding:18px 20px;font-family:var(--mono);font-size:13px;line-height:1.85;min-height:230px}
+  .term .p{color:var(--accent)}
+  .term .out{color:var(--fg-dim)}
+  .term .cur{display:inline-block;width:8px;height:15px;background:var(--accent);
+              vertical-align:-2px;animation:blink 1.2s steps(1,end) infinite}
+  .statusbar{display:flex;gap:18px;padding:8px 16px;border-top:1px solid var(--line);
+             background:var(--surface-2);font-family:var(--mono);font-size:11px;color:var(--fg-dim)}
+  .statusbar .trace{color:var(--trace)}
+
+  .rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .rule{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:var(--surface)}
+  .rule.no{border-color:#3A2626}
+  .rule .tag{font-family:var(--mono);font-size:11px;letter-spacing:.1em;margin-bottom:8px}
+  .rule .yes-t{color:var(--accent)}
+  .rule .no-t{color:#E06C6C}
+  @media(max-width:640px){.body{grid-template-columns:1fr}.side{border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Marka panosu · v1</p>
+  <h1>Sshby</h1>
+  <p class="lede">Tarayıcıdan Linux sunucularına terminal. Her bağlantı Elasticsearch'e iz bırakır.
+  Görsel dil Hoppscotch ile aynı ailede: koyu yüzey, tek parlak yeşil, keskin monospace.</p>
+
+  <section>
+    <h2>Logo</h2>
+    <div class="logos">
+      <div class="tile">
+        <svg viewBox="0 0 256 256" width="104" height="104" aria-label="Sshby ikonu">
+          <rect width="256" height="256" rx="60" fill="#10B981"/>
+          <path d="M52 78 L102 128 L52 178" fill="none" stroke="#08201A" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="124" y="168" width="44" height="20" rx="10" fill="#08201A"/>
+          <rect x="180" y="168" width="16" height="20" rx="8" fill="#08201A" opacity=".55"/>
+          <rect x="206" y="168" width="8" height="20" rx="4" fill="#08201A" opacity=".28"/>
+        </svg>
+        <span class="cap">Birincil ikon</span>
+      </div>
+      <div class="tile">
+        <svg viewBox="0 0 256 256" width="104" height="104" aria-label="Sshby ikonu, koyu">
+          <rect width="256" height="256" rx="60" fill="#181818" stroke="#2A2A2A" stroke-width="2"/>
+          <path d="M52 78 L102 128 L52 178" fill="none" stroke="#10B981" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="124" y="168" width="44" height="20" rx="10" fill="#6E5AE6"/>
+          <rect x="180" y="168" width="16" height="20" rx="8" fill="#6E5AE6" opacity=".6"/>
+          <rect x="206" y="168" width="8" height="20" rx="4" fill="#6E5AE6" opacity=".3"/>
+        </svg>
+        <span class="cap">Koyu varyant</span>
+      </div>
+      <div class="tile light">
+        <div class="lockup">
+          <svg viewBox="0 0 256 256" width="42" height="42" aria-hidden="true">
+            <rect width="256" height="256" rx="60" fill="#10B981"/>
+            <path d="M52 78 L102 128 L52 178" fill="none" stroke="#08201A" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="124" y="168" width="44" height="20" rx="10" fill="#08201A"/>
+            <rect x="180" y="168" width="16" height="20" rx="8" fill="#08201A" opacity=".55"/>
+            <rect x="206" y="168" width="8" height="20" rx="4" fill="#08201A" opacity=".28"/>
+          </svg>
+          <span class="word" style="color:#181818">sshby<span class="tld">.dev</span></span>
+        </div>
+        <span class="cap">Açık zemin lockup</span>
+      </div>
+      <div class="tile">
+        <div class="lockup">
+          <svg viewBox="0 0 256 256" width="42" height="42" aria-hidden="true">
+            <rect width="256" height="256" rx="60" fill="#10B981"/>
+            <path d="M52 78 L102 128 L52 178" fill="none" stroke="#08201A" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="124" y="168" width="44" height="20" rx="10" fill="#08201A"/>
+            <rect x="180" y="168" width="16" height="20" rx="8" fill="#08201A" opacity=".55"/>
+            <rect x="206" y="168" width="8" height="20" rx="4" fill="#08201A" opacity=".28"/>
+          </svg>
+          <span class="word">sshby<span class="tld">.dev</span></span><span class="caret"></span>
+        </div>
+        <span class="cap">Koyu zemin lockup</span>
+      </div>
+    </div>
+    <p class="note" style="margin-top:18px">İmza öğe: chevron'un altındaki alt çizgi sağa doğru sönerek üçe bölünüyor — hem
+    terminal satırı hem de Elasticsearch'e giden iz. 16 px altında bu iz görünmez olur; favicon boyutlarında yalnızca
+    chevron ve tek bir tam alt çizgi kullanın.</p>
+  </section>
+
+  <section>
+    <h2>Renk</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#181818;border-bottom:1px solid #2A2A2A"></div>
+        <div class="meta"><div class="name">Zemin</div><div class="hex">#181818</div>
+        <div class="use">Ana uygulama zemini</div></div></div>
+      <div class="sw"><div class="chip" style="background:#1E1E1E"></div>
+        <div class="meta"><div class="name">Yüzey</div><div class="hex">#1E1E1E</div>
+        <div class="use">Panel, kart, kenar çubuğu</div></div></div>
+      <div class="sw"><div class="chip" style="background:#2A2A2A"></div>
+        <div class="meta"><div class="name">Ayraç</div><div class="hex">#2A2A2A</div>
+        <div class="use">Kenarlık ve bölücü çizgiler</div></div></div>
+      <div class="sw"><div class="chip" style="background:#10B981"></div>
+        <div class="meta"><div class="name">Yeşil</div><div class="hex">#10B981</div>
+        <div class="use">Vurgu, imleç, aktif oturum, birincil buton</div></div></div>
+      <div class="sw"><div class="chip" style="background:#6E5AE6"></div>
+        <div class="meta"><div class="name">İz moru</div><div class="hex">#6E5AE6</div>
+        <div class="use">Yalnızca Elasticsearch akışı ve denetim kaydı</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F3F3F3"></div>
+        <div class="meta"><div class="name">Metin</div><div class="hex">#F3F3F3 / #8A8A8A</div>
+        <div class="use">Birincil ve ikincil metin</div></div></div>
+    </div>
+    <p class="note" style="margin-top:18px">Mor yalnızca iz/kayıt bağlamında görünür. Bu kısıt önemli: kullanıcı moru
+    gördüğü her yerde "bu olay Elastic'e yazıldı" diye okur. Yeşille mor asla aynı öğede birlikte kullanılmaz.</p>
+  </section>
+
+  <section>
+    <h2>Tipografi</h2>
+    <div class="type-row">
+      <div class="label">Wordmark · JetBrains Mono ExtraBold 800</div>
+      <div class="spec-display">sshby.dev</div>
+    </div>
+    <div class="type-row">
+      <div class="label">Arayüz · Inter 400 / 500 / 600</div>
+      <div class="spec-body">Sunucu ekle, bağlan, oturumu kapat.</div>
+    </div>
+    <div class="type-row">
+      <div class="label">Terminal ve veri · JetBrains Mono 400</div>
+      <div class="spec-data">root@hybprod-master-01:~# kubectl get nodes</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Arayüzde uygulaması</h2>
+    <div class="app">
+      <div class="topbar">
+        <span class="mini">&gt;</span>
+        <span class="name">sshby</span>
+        <span class="spacer"></span>
+        <span class="pill">4 sunucu</span>
+        <span class="pill live">Elastic'e yazılıyor</span>
+      </div>
+      <div class="body">
+        <div class="side">
+          <div class="grp">Üretim</div>
+          <div class="host on"><span class="dot"></span>hybprod-master-01</div>
+          <div class="host"><span class="dot"></span>hybprod-worker-01</div>
+          <div class="grp">Test</div>
+          <div class="host"><span class="dot off"></span>test-int-01</div>
+          <div class="host"><span class="dot off"></span>test-dmz-01</div>
+        </div>
+        <div class="term">
+          <div><span class="p">root@hybprod-master-01</span><span class="out">:~#</span> uptime</div>
+          <div class="out">&nbsp;10:41:02 up 87 days,  3:12,  1 user,  load average: 0.42, 0.51, 0.48</div>
+          <div><span class="p">root@hybprod-master-01</span><span class="out">:~#</span> <span class="cur"></span></div>
+        </div>
+      </div>
+      <div class="statusbar">
+        <span>SSH · 10.0.0.11:22</span>
+        <span>Oturum 00:04:19</span>
+        <span class="trace">iz: sshby-sessions-2026.08.10</span>
+      </div>
+    </div>
+    <p class="note" style="margin-top:18px">Durum çubuğundaki mor indeks adı kalıcı olarak görünür. Kullanıcı hiçbir zaman
+    "acaba kaydediliyor mu" diye sormaz — ekranda yazar.</p>
+  </section>
+
+  <section>
+    <h2>Kurallar</h2>
+    <div class="rules">
+      <div class="rule">
+        <div class="tag yes-t">YAP</div>
+        <p>İkonun etrafında en az kendi genişliğinin dörtte biri kadar boşluk bırakın.</p>
+      </div>
+      <div class="rule">
+        <div class="tag yes-t">YAP</div>
+        <p>Wordmark'ı her zaman küçük harfle yazın: <span style="font-family:var(--mono)">sshby</span>.</p>
+      </div>
+      <div class="rule no">
+        <div class="tag no-t">YAPMA</div>
+        <p>İkonu yeşil ve mor dışında bir renge boyamayın, gradyan uygulamayın.</p>
+      </div>
+      <div class="rule no">
+        <div class="tag no-t">YAPMA</div>
+        <p>Chevron'u alt çizgiden ayırmayın; ikisi tek bir işarettir.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

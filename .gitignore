@@ -1,0 +1,32 @@
+node_modules/
+dist/
+build/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Asla depoya girmemesi gerekenler
+*.pem
+*.key
+!deploy/**/*.key.example
+secrets/
+*.sshby
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Makineye özel araç ayarları: yerel dosya yolları ve izin listesi taşır,
+# başka bir makinede anlamsızdır.
+.claude/settings.local.json
+
+deploy/compose/data/
+playwright-report/
+test-results/

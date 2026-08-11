@@ -1,0 +1,105 @@
+/* Yazı tipleri npm paketinden gelir; uygulama internete kapalı bir ortamda
+   çalışacağı için Google Fonts'a CDN bağımlılığı bilerek kurulmadı. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/800.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  ::selection {
+    background: rgba(16, 185, 129, 0.28);
+  }
+
+  /* Odak halkası her yerde aynı olsun — klavyeyle gezinme birinci sınıf. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/70 ring-offset-2 ring-offset-bg;
+  }
+
+  /* İnce, koyu temaya oturan kaydırma çubuğu. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2a2a2a transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-line;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #3a3a3a;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  /* Panodaki "eyebrow" tipografisi: bölüm başlıkları ve etiketler. */
+  .eyebrow {
+    @apply font-mono text-label uppercase tracking-[0.14em] text-fg-dim;
+  }
+
+  .panel {
+    @apply rounded-panel border border-line bg-surface;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-0.5 font-mono text-[11px] text-fg-dim;
+  }
+
+  /* Denetim rozeti — mor yalnızca burada ve denetim ekranlarında görünür. */
+  .pill-trace {
+    @apply border-trace-border text-trace;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded border border-line bg-surface-2 px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:bg-line disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-transparent bg-accent text-accent-fg hover:bg-accent/90;
+  }
+
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-fg-dim hover:bg-surface-2 hover:text-fg;
+  }
+
+  .input {
+    @apply w-full rounded border border-line bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-dim/70 focus:border-accent focus:outline-none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Sshby">
+  <rect width="256" height="256" rx="60" fill="#10B981"/>
+  <path d="M52 78 L102 128 L52 178" fill="none" stroke="#08201A" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#08201A">
+    <rect x="124" y="168" width="44" height="20" rx="10"/>
+    <rect x="180" y="168" width="16" height="20" rx="8" opacity="0.55"/>
+    <rect x="206" y="168" width="8" height="20" rx="4" opacity="0.28"/>
+  </g>
+</svg>

@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1.7
+#
+# sshby web imajı (SPA + nginx). Build bağlamı depo köküdür:
+#   docker build -f deploy/docker/Dockerfile.web .
+
+ARG NODE_IMAGE=node:22-bookworm-slim
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.27-alpine
+
+# ------------------------------------------------------------------ bağımlılık
+FROM ${NODE_IMAGE} AS deps
+# Kurumsal TLS kesmesi arkasında npm registry'ye ulaşabilmek için — ayrıntı
+# deploy/docker/certs/README.md içinde.
+COPY deploy/docker/certs/corporate-ca.crt /etc/ssl/sshby-extra-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/sshby-extra-ca.crt
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml .npmrc ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/shared/package.json packages/shared/
+COPY pnpm-lock.yaml* ./
+
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --no-frozen-lockfile
+
+# ----------------------------------------------------------------------- build
+FROM deps AS build
+ARG APP_VERSION=0.1.0-dev
+ENV VITE_APP_VERSION=${APP_VERSION}
+WORKDIR /app
+
+COPY tsconfig.base.json ./
+COPY packages/shared ./packages/shared
+COPY apps/web ./apps/web
+
+RUN pnpm --filter @sshby/shared build \
+ && pnpm --filter @sshby/web build
+
+# ---------------------------------------------------------------------- runner
+FROM ${NGINX_IMAGE} AS runner
+
+# nginx-unprivileged 8080'de, root olmadan dinler.
+COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY deploy/docker/security-headers.conf /etc/nginx/sshby-security-headers.conf
+COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1
