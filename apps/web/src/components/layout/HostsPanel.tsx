@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlusIcon, SearchIcon, ServerIcon, XIcon } from 'lucide-react';
 import type { Folder, Host } from '@sshby/shared';
@@ -13,38 +13,31 @@ import {
   useDeleteHost,
   useInventory,
   useMoveNode,
+  useUpdateHost,
 } from '@/lib/queries';
 import { useTerminalStore } from '@/lib/terminal-store';
 import { useWorkspaceStore } from '@/lib/workspace-store';
-import { SidebarResizer } from './SidebarResizer';
 
 type Dialog =
   | { kind: 'host'; host: Host | null }
-  | { kind: 'folder'; folder: Folder | null }
+  /** `parent` = yeni klasörün altına gireceği klasör; alt klasör oluşturma. */
+  | { kind: 'folder'; folder: Folder | null; parent: Folder | null }
   | { kind: 'delete-host'; host: Host }
   | { kind: 'delete-folder'; folder: Folder }
   | null;
 
-export function Sidebar() {
+/**
+ * Sunucu ağacı paneli. Dış kabuk (başlık, genişlik, kapatma) `SidePanel`
+ * içinde; burada yalnızca içerik var.
+ */
+export function HostsPanel() {
   const t = useT();
   const inventory = useInventory();
   const moveNode = useMoveNode();
   const deleteHost = useDeleteHost();
   const deleteFolder = useDeleteFolder();
   const cloneHost = useCloneHost();
-
-  /**
-   * Genişlik kalıcı: kullanıcı bir kez ayarlayıp unutabilmeli. Okuma
-   * başlatıcıda yapılıyor ki ilk çizimde doğru genişlikle gelsin, sonradan
-   * zıplamasın.
-   */
-  const [width, setWidth] = useState(() => {
-    const stored = Number(localStorage.getItem('sshby.sidebar.width'));
-    return Number.isFinite(stored) && stored >= 200 ? stored : 250;
-  });
-  useEffect(() => {
-    localStorage.setItem('sshby.sidebar.width', String(width));
-  }, [width]);
+  const updateHost = useUpdateHost();
 
   const filter = useWorkspaceStore((s) => s.filter);
   const setFilter = useWorkspaceStore((s) => s.setFilter);
@@ -63,16 +56,35 @@ export function Sidebar() {
 
   return (
     <>
-    <nav
-      className="flex shrink-0 flex-col border-r border-line bg-surface"
-      style={{ width }}
-    >
       <div className="flex items-center gap-1 px-2 pb-1 pt-2">
-        <span className="eyebrow flex-1 pl-1.5">{t('sidebar.servers')}</span>
+        <div className="relative flex-1">
+          <SearchIcon
+            size={13}
+            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-fg-dim"
+            aria-hidden="true"
+          />
+          <input
+            className="input py-1.5 pl-7 pr-7 font-mono text-[12px]"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder={t('sidebar.filter')}
+            aria-label={t('sidebar.filterAria')}
+          />
+          {filter && (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-dim hover:text-fg"
+              onClick={() => setFilter('')}
+              aria-label={t('sidebar.clearFilter')}
+            >
+              <XIcon size={13} />
+            </button>
+          )}
+        </div>
         <button
           type="button"
-          className="btn-ghost rounded p-1.5"
-          onClick={() => setDialog({ kind: 'folder', folder: null })}
+          className="btn-ghost shrink-0 rounded p-1.5"
+          onClick={() => setDialog({ kind: 'folder', folder: null, parent: null })}
           aria-label={t('sidebar.addFolder')}
           title={t('sidebar.addFolder')}
         >
@@ -80,38 +92,13 @@ export function Sidebar() {
         </button>
         <button
           type="button"
-          className="btn-ghost rounded p-1.5"
+          className="btn-ghost shrink-0 rounded p-1.5"
           onClick={() => setDialog({ kind: 'host', host: null })}
           aria-label={t('sidebar.addHost')}
           title={t('sidebar.addHost')}
         >
           <ServerIcon size={14} />
         </button>
-      </div>
-
-      <div className="relative px-2 pb-2">
-        <SearchIcon
-          size={13}
-          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-fg-dim"
-          aria-hidden="true"
-        />
-        <input
-          className="input py-1.5 pl-7 pr-7 font-mono text-[12px]"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder={t('sidebar.filter')}
-          aria-label={t('sidebar.filterAria')}
-        />
-        {filter && (
-          <button
-            type="button"
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-dim hover:text-fg"
-            onClick={() => setFilter('')}
-            aria-label={t('sidebar.clearFilter')}
-          >
-            <XIcon size={13} />
-          </button>
-        )}
       </div>
 
       <InventoryTree
@@ -129,6 +116,7 @@ export function Sidebar() {
           navigate('/');
         }}
         onCloneHost={(host) => cloneHost.mutate(host.id)}
+        onTogglePin={(host) => updateHost.mutate({ id: host.id, pinned: !host.pinned })}
         onOpenHistory={(host) => {
           setSelectedHostId(host.id);
           openHistoryTab(host.id, host.name);
@@ -146,7 +134,8 @@ export function Sidebar() {
         }}
         onEditHost={(host) => setDialog({ kind: 'host', host })}
         onDeleteHost={(host) => setDialog({ kind: 'delete-host', host })}
-        onEditFolder={(folder) => setDialog({ kind: 'folder', folder })}
+        onEditFolder={(folder) => setDialog({ kind: 'folder', folder, parent: null })}
+        onAddSubfolder={(folder) => setDialog({ kind: 'folder', folder: null, parent: folder })}
         onDeleteFolder={(folder) => setDialog({ kind: 'delete-folder', folder })}
         onMove={(input) => moveNode.mutate(input)}
       />
@@ -165,7 +154,12 @@ export function Sidebar() {
       )}
 
       {dialog?.kind === 'folder' && (
-        <FolderDialog folder={dialog.folder} parentId={null} onClose={() => setDialog(null)} />
+        <FolderDialog
+          folder={dialog.folder}
+          folders={folders}
+          parentId={dialog.parent?.id ?? dialog.folder?.parentId ?? null}
+          onClose={() => setDialog(null)}
+        />
       )}
 
       {dialog?.kind === 'delete-host' && (
@@ -204,9 +198,6 @@ export function Sidebar() {
           onClose={() => setDialog(null)}
         />
       )}
-    </nav>
-
-    <SidebarResizer width={width} onChange={setWidth} />
     </>
   );
 }

@@ -31,7 +31,7 @@ const AUTH_MODES: { value: AuthMode; labelKey: TranslationKey }[] = [
  * terminal, dosya gezgini, metrikler ve denetim hiçbir değişiklik olmadan
  * çalışıyor. Kayıt 24 saat kullanılmazsa siliniyor.
  */
-export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
+export function QuickConnectPanel() {
   const t = useT();
   const apiError = useApiError();
   const credentials = useCredentials();
@@ -116,21 +116,7 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <aside className="flex w-[300px] shrink-0 flex-col border-r border-line bg-surface">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3.5">
-        <ZapIcon size={15} className="shrink-0 text-accent" aria-hidden="true" />
-        <h2 className="flex-1 text-[15px] font-semibold tracking-tight">{t('quick.title')}</h2>
-        <button
-          type="button"
-          className="btn-ghost rounded p-1.5"
-          onClick={onClose}
-          aria-label={t('quick.closePanel')}
-        >
-          <ChevronLeftIcon size={15} />
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 py-3">
+    <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 py-3">
         <Field label={t('quick.host')}>
           <input
             className="input font-mono text-[12.5px]"
@@ -275,9 +261,8 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="pt-1 text-[11px] leading-relaxed text-fg-dim">{t('quick.notice')}</p>
-      </form>
-    </aside>
+      <p className="pt-1 text-[11px] leading-relaxed text-fg-dim">{t('quick.notice')}</p>
+    </form>
   );
 }
 

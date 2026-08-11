@@ -1,4 +1,4 @@
-import { and, asc, eq, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, lt, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import {
   createFolderSchema,
@@ -51,6 +51,8 @@ function toHost(row: HostRow, credentialUsername: string | null): Host {
     effectiveUsername: resolveUsername(row.username, credentialUsername),
     credentialId: row.credentialId,
     defaultPath: row.defaultPath,
+    notes: row.notes,
+    pinned: row.pinned,
     tags: row.tags,
     jumpHostId: row.jumpHostId,
     sortIndex: row.sortIndex,
@@ -184,7 +186,8 @@ export async function registerInventoryRoutes(app: FastifyInstance): Promise<voi
         .from(hosts)
         // Geçici (hızlı bağlantı) kayıtları ağaçta göstermiyoruz.
         .where(and(eq(hosts.ownerId, user.id), eq(hosts.ephemeral, false)))
-        .orderBy(asc(hosts.sortIndex), asc(hosts.name)),
+        // Sabitlenenler önce; kendi aralarında sürükle-bırak sırasını korurlar.
+        .orderBy(desc(hosts.pinned), asc(hosts.sortIndex), asc(hosts.name)),
       // Kasa küçük; join yerine bellekte eşleme kurmak hem basit hem hızlı.
       db
         .select({ id: credentials.id, username: credentials.username })
@@ -238,11 +241,38 @@ export async function registerInventoryRoutes(app: FastifyInstance): Promise<voi
     const id = requireUuid((request.params as { id?: string }).id);
     const body = updateFolderSchema.parse(request.body);
 
+    /**
+     * Üst klasör değiştiriliyorsa döngü kontrolü şart: bir klasörü kendi alt
+     * ağacına almak, ağacı veritabanında erişilemez bir halkaya sokar.
+     * Sürükle-bırak yolunda aynı kontrol `/inventory/move` içinde var.
+     */
+    if (body.parentId !== undefined && body.parentId !== null) {
+      if (body.parentId === id) {
+        throw badRequest('cyclic_move', 'Bir klasör kendi içine taşınamaz.');
+      }
+      await assertFolderOwned(body.parentId, user.id);
+
+      const allFolders = await db
+        .select({ id: folders.id, parentId: folders.parentId })
+        .from(folders)
+        .where(eq(folders.ownerId, user.id));
+      const parentOf = new Map(allFolders.map((f) => [f.id, f.parentId]));
+
+      let cursor: string | null = body.parentId;
+      while (cursor) {
+        if (cursor === id) {
+          throw badRequest('cyclic_move', 'Bir klasör kendi alt klasörüne taşınamaz.');
+        }
+        cursor = parentOf.get(cursor) ?? null;
+      }
+    }
+
     const [updated] = await db
       .update(folders)
       .set({
         ...(body.name !== undefined ? { name: body.name.trim() } : {}),
         ...(body.color !== undefined ? { color: body.color } : {}),
+        ...(body.parentId !== undefined ? { parentId: body.parentId } : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(folders.id, id), eq(folders.ownerId, user.id)))
@@ -309,6 +339,8 @@ export async function registerInventoryRoutes(app: FastifyInstance): Promise<voi
         username: hostUsername,
         credentialId: body.credentialId ?? null,
         defaultPath: body.defaultPath ?? null,
+        notes: body.notes ?? null,
+        pinned: body.pinned ?? false,
         tags: body.tags,
         jumpHostId: body.jumpHostId ?? null,
         sortIndex: await nextSortIndex(hosts, user.id, hosts.folderId, folderId),
@@ -373,6 +405,8 @@ export async function registerInventoryRoutes(app: FastifyInstance): Promise<voi
         ...(body.credentialId !== undefined ? { credentialId: nextCredentialId } : {}),
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
         ...(body.defaultPath !== undefined ? { defaultPath: body.defaultPath } : {}),
+        ...(body.notes !== undefined ? { notes: body.notes } : {}),
+        ...(body.pinned !== undefined ? { pinned: body.pinned } : {}),
         ...(body.tags !== undefined ? { tags: body.tags } : {}),
         ...(body.jumpHostId !== undefined ? { jumpHostId: body.jumpHostId } : {}),
         updatedAt: new Date(),
@@ -444,6 +478,9 @@ export async function registerInventoryRoutes(app: FastifyInstance): Promise<voi
         username: source.username,
         credentialId: source.credentialId,
         defaultPath: source.defaultPath,
+        notes: source.notes,
+        // Kopya sabitlenmiş gelmez: sabitleme kullanıcının o kayda özel tercihi.
+        pinned: false,
         tags: source.tags,
         jumpHostId: source.jumpHostId,
         sortIndex: await nextSortIndex(hosts, user.id, hosts.folderId, source.folderId),

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeftIcon, FolderIcon, SearchIcon, TerminalIcon, XIcon } from 'lucide-react';
+import { FolderIcon, SearchIcon, TerminalIcon, XIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { useT, type TranslateFn, type TranslationKey } from '@/lib/i18n';
 import { useTerminalStore, type SessionState } from '@/lib/terminal-store';
@@ -49,7 +49,7 @@ interface Connection {
  * tarafındaki oturum kaydını sormak yerine buradan türetiyoruz; kullanıcının
  * görmek istediği kendi penceresindeki durum.
  */
-export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
+export function ConnectionsPanel() {
   const t = useT();
   const tabs = useTerminalStore((s) => s.tabs);
   const activeTabId = useTerminalStore((s) => s.activeTabId);
@@ -103,21 +103,7 @@ export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
   }, [connections, query]);
 
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col border-r border-line bg-surface">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3.5">
-        <h2 className="flex-1 text-[15px] font-semibold tracking-tight">
-          {t('connections.title')}
-        </h2>
-        <button
-          type="button"
-          className="btn-ghost rounded p-1.5"
-          onClick={onClose}
-          aria-label={t('connections.closePanel')}
-        >
-          <ChevronLeftIcon size={15} />
-        </button>
-      </div>
-
+    <>
       <div className="relative shrink-0 px-3 py-2.5">
         <SearchIcon
           size={13}
@@ -228,6 +214,6 @@ export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
           );
         })}
       </div>
-    </aside>
+    </>
   );
 }

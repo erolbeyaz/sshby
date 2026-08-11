@@ -25,6 +25,16 @@ listesi ve son etkinlikler. Etkinlikler `audit_outbox`'tan okunur; arka plan
 komutları (`source: system`) elenir. Sunuculara açılışta ping ATILMAZ — "bağlı"
 sayısı gerçekten açık olan SSH oturumlarından türer.
 
+**Arayüz düzeni** — solda dikey bölüm menüsü (Ana Bilgisayarlar, Kimlik
+Bilgileri, Bağlantılar, Hızlı Bağlantı + yapılandırma ve yönetim kısayolları).
+Seçili bölüm vurgulu kalır ve içeriği hemen sağdaki panelde açılır; aynı
+öğeye tekrar tıklamak paneli kapatır. Panel genişliği sürüklenebilir ve
+`localStorage`da saklanır. Üst bar yalnızca marka, sunucu sayısı, denetim
+rozeti, dil ve hesap menüsü taşır.
+
+Terminal açık değilken ana ekran sunucu kartlarıyla açılır: her kart durum
+noktası, adres, etiketler ve tek tıkla bağlanma düğmesi taşır.
+
 **Kimlik** — e-posta/parola kaydı (argon2id), ilk kullanıcı admin olur, JWT
 access + httpOnly refresh, oturum listeleme/iptal, kullanıcı yönetimi ekranı.
 
@@ -34,6 +44,18 @@ kullanıcıya özel, kaç sunucuda kullanıldığı sayacı.
 
 **Envanter** — iç içe klasörler, sürükle-bırak taşıma ve sıralama, döngüsel
 taşıma engeli, klasör silinince sunucular köke taşınır (silinmez), etiketler.
+
+Klasör ağacındaki her klasörün "alt klasör ekle" eylemi var; klasör formunda
+üst klasör seçilebildiği için var olan bir klasör başka bir dala da
+taşınabilir (kendi alt ağacı seçeneklerden düşer). Klasör seçici aranabilir ve
+eşleşme yoksa yazılan adı doğrudan oluşturur — sunucu formunu terk etmeden
+klasör açmak için.
+
+Sunucu formu bölümlere ayrıldı: **protokoller** (yalnızca SSH), **bağlantı
+ayrıntıları** (adres, port, kolay ad, kimlik bilgisi, SSH kullanıcısı),
+**klasör ve gelişmiş** (klasör, etiketler, varsayılan dizin, özel notlar,
+üstte sabitle). Notlar serbest metin; sabitlenen sunucular ağacın ve
+listelerin başında toplanır.
 
 **Terminal** — xterm.js, paralel oturumlar (aynı sunucuya birden fazla, numaralı),
 sekme ve ızgara düzeni, sürükleyerek sıralama, sürüklenebilir ayırıcılarla
@@ -143,6 +165,7 @@ açılmaz ("kayıt tutulamıyorsa bağlanma" politikası). Varsayılan kapalı.
 | `test-hizli.mjs` | 10/10 | hızlı bağlantı, envanterin kirlenmemesi, terminal/SFTP/metrik |
 | `test-faz6.mjs` | 13/13 | ES bağlantı testi, parola maskeleme, aktarım, ECS alanları, kuyruk dayanıklılığı |
 | `test-faz7.mjs` | 29/29 | paket biçimi, iki gizli veri kipi, yanlış parola reddi, üç çakışma stratejisi, geri yükleme sonrası gerçek SSH, izolasyon |
+| `test-arayuz.mjs` | 12/12 | üç seviyeli iç içe klasör, klasör taşıma, döngü koruması, not/sabitleme, sıralama, eski paket uyumu |
 
 Bu betikler **depoda değil, scratchpad'de** tutuluyor; kalıcı bir test paketi
 henüz yok (bkz. teknik borç).

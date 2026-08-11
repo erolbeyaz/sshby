@@ -3,20 +3,21 @@ import { useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { CommandPalette } from '@/components/CommandPalette';
 import { TerminalWorkspace } from '@/components/terminal/TerminalWorkspace';
-import { useAuthStore } from '@/lib/auth-store';
 import { useInventory } from '@/lib/queries';
 import { useTerminalStore } from '@/lib/terminal-store';
-import { ConnectionsPanel } from './ConnectionsPanel';
-import { QuickConnectPanel } from './QuickConnectPanel';
-import { Sidebar } from './Sidebar';
+import { SideNav } from './SideNav';
+import { SidePanel } from './SidePanel';
 import { StatusBar } from './StatusBar';
 import { TopBar } from './TopBar';
 import { UserMenu } from './UserMenu';
 
 /**
- * Uygulama kabuğu: üst bar, sol ağaç, içerik, alt durum çubuğu.
- * Yükseklik zinciri `h-screen` + `min-h-0` ile kuruldu — terminal panelinin
- * sayfayı taşırmadan kendi içinde kaymasını sağlayan şey bu.
+ * Uygulama kabuğu: üst bar, sol menü, açılır panel, içerik, alt durum çubuğu.
+ *
+ * Gezinme sol menüye taşındı; üst bar yalnızca marka, sunucu sayısı, denetim
+ * rozeti, dil ve hesap için kaldı. Yükseklik zinciri `h-screen` + `min-h-0`
+ * ile kuruldu — terminal panelinin sayfayı taşırmadan kendi içinde kaymasını
+ * sağlayan şey bu.
  */
 export function AppShell({
   children,
@@ -28,13 +29,14 @@ export function AppShell({
   auditIndex?: string | null;
 }) {
   const inventory = useInventory();
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
-  const hasTabs = useTerminalStore((s) => s.tabs.length > 0 || s.fileTabs.length > 0 || s.metricTabs.length > 0 || s.historyTabs.length > 0);
+  const hasTabs = useTerminalStore(
+    (s) =>
+      s.tabs.length > 0 ||
+      s.fileTabs.length > 0 ||
+      s.metricTabs.length > 0 ||
+      s.historyTabs.length > 0,
+  );
   const { pathname } = useLocation();
-  const connectionsOpen = useTerminalStore((s) => s.connectionsOpen);
-  const setConnectionsOpen = useTerminalStore((s) => s.setConnectionsOpen);
-  const quickConnectOpen = useTerminalStore((s) => s.quickConnectOpen);
-  const setQuickConnectOpen = useTerminalStore((s) => s.setQuickConnectOpen);
 
   /**
    * Terminal, yönlendirici çıktısının DIŞINDA ve her zaman bağlı duruyor.
@@ -52,17 +54,11 @@ export function AppShell({
       <TopBar
         hostCount={inventory.data?.hosts.length ?? 0}
         auditEnabled={auditEnabled}
-        connectionsOpen={connectionsOpen}
-        onToggleConnections={() => setConnectionsOpen(!connectionsOpen)}
-        quickConnectOpen={quickConnectOpen}
-        onToggleQuickConnect={() => setQuickConnectOpen(!quickConnectOpen)}
-        isAdmin={isAdmin}
         right={<UserMenu />}
       />
       <div className="flex min-h-0 flex-1">
-        <Sidebar />
-        {connectionsOpen && <ConnectionsPanel onClose={() => setConnectionsOpen(false)} />}
-        {quickConnectOpen && <QuickConnectPanel onClose={() => setQuickConnectOpen(false)} />}
+        <SideNav />
+        <SidePanel />
 
         <main className="relative min-w-0 flex-1">
           {/* Terminal katmanı: sayfadan bağımsız, kalıcı. */}

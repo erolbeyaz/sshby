@@ -66,10 +66,11 @@ interface TerminalState {
   openHistoryTab: (hostId: string, title: string) => void;
   closeHistoryTab: (id: string) => void;
   setActiveHistoryTab: (id: string) => void;
-  connectionsOpen: boolean;
-  setConnectionsOpen: (open: boolean) => void;
-  quickConnectOpen: boolean;
-  setQuickConnectOpen: (open: boolean) => void;
+  /*
+   * Bağlantılar ve hızlı bağlantı panellerinin açıklığı buradan kaldırıldı;
+   * sol menü seçimi tek kaynak (`workspace-store` → `nav`). İki ayrı bayrak
+   * varken menüdeki vurgu ile panelin gerçek durumu ayrışabiliyordu.
+   */
   openTab: (hostId: string, title: string) => string;
   closeTab: (id: string) => void;
   setActive: (id: string) => void;
@@ -167,10 +168,6 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   },
 
   setActiveHistoryTab: (id) => set({ activeHistoryTabId: id }),
-  connectionsOpen: false,
-  setConnectionsOpen: (open) => set({ connectionsOpen: open }),
-  quickConnectOpen: false,
-  setQuickConnectOpen: (open) => set({ quickConnectOpen: open }),
 
   setGridSizes: (axis, sizes) =>
     set(axis === 'column' ? { gridColumns: sizes } : { gridRows: sizes }),

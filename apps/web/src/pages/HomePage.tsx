@@ -7,6 +7,7 @@ import {
   DatabaseIcon,
   FolderIcon,
   KeyRoundIcon,
+  PinIcon,
   PlugZapIcon,
   ServerIcon,
   TerminalIcon,
@@ -21,6 +22,7 @@ import { localeTag, useI18n, useT, type TranslateFn, type TranslationKey } from 
 import { useInventory } from '@/lib/queries';
 import { hostConnectionState, useTerminalStore } from '@/lib/terminal-store';
 import { useDocumentTitle } from '@/lib/use-document-title';
+import { useWorkspaceStore } from '@/lib/workspace-store';
 
 interface Dashboard {
   version: string;
@@ -67,7 +69,7 @@ export function HomePage() {
   const inventory = useInventory();
   const navigate = useNavigate();
   const openTab = useTerminalStore((s) => s.openTab);
-  const setQuickConnectOpen = useTerminalStore((s) => s.setQuickConnectOpen);
+  const openNav = useWorkspaceStore((s) => s.openNav);
   const tabs = useTerminalStore((s) => s.tabs);
   const [configOpen, setConfigOpen] = useState(false);
 
@@ -144,6 +146,35 @@ export function HomePage() {
             <Count icon={FolderIcon} label={t('home.folders')} value={data?.totals.folders ?? 0} />
           </div>
 
+          {/*
+            Sunucu kartları en üstte: terminal açık değilken bu ekranın işi
+            "hangi sunucuya bağlanacağım" sorusunu cevaplamak. Sayaçlar ve
+            etkinlik akışı altta kalıyor — onlara bakmak ikincil bir ihtiyaç.
+          */}
+          <section className="panel">
+            <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+              <h2 className="eyebrow">{t('home.myServers')}</h2>
+              <span className="font-mono text-[11px] text-fg-dim">
+                {t('home.connectedRatio', { online, total: hosts.length })}
+              </span>
+            </div>
+
+            {hosts.length === 0 ? (
+              <p className="px-4 py-10 text-center text-[13px] text-fg-dim">{t('home.noHosts')}</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-px bg-line sm:grid-cols-2 xl:grid-cols-3">
+                {hosts.map((host) => (
+                  <HostCard
+                    key={host.id}
+                    host={host}
+                    onConnect={() => openTab(host.id, host.name)}
+                    onOpen={() => navigate(`/server/${host.id}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
           {/* ---------------------------------------------------- hızlı eylem */}
           <section className="panel">
             <h2 className="eyebrow border-b border-line px-4 py-2.5">{t('home.quickActions')}</h2>
@@ -152,20 +183,19 @@ export function HomePage() {
                 icon={ZapIcon}
                 title={t('home.actionQuickConnect')}
                 description={t('home.actionQuickConnectDesc')}
-                onClick={() => setQuickConnectOpen(true)}
+                onClick={() => openNav('quick')}
               />
               <Action
                 icon={KeyRoundIcon}
                 title={t('home.actionAddCredential')}
                 description={t('home.actionAddCredentialDesc')}
-                onClick={() => navigate('/vault')}
+                onClick={() => openNav('credentials')}
               />
               <Action
-                icon={TerminalIcon}
-                title={t('home.actionConnect')}
-                description={t('home.actionConnectDesc')}
-                onClick={() => hosts[0] && navigate(`/server/${hosts[0].id}`)}
-                disabled={hosts.length === 0}
+                icon={ServerIcon}
+                title={t('home.actionInventory')}
+                description={t('home.actionInventoryDesc')}
+                onClick={() => openNav('hosts')}
               />
               <Action
                 icon={ArrowDownUpIcon}
@@ -176,7 +206,7 @@ export function HomePage() {
             </div>
           </section>
 
-          {/* --------------------------------------------------- sunucu listesi */}
+          {/* ------------------------------------------- ayrıntılı sunucu durumu */}
           <section className="panel">
             <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
               <h2 className="eyebrow">{t('home.hostStatus')}</h2>
@@ -275,6 +305,71 @@ export function HomePage() {
       </div>
 
       {configOpen && <ConfigTransferDialog onClose={() => setConfigOpen(false)} />}
+    </div>
+  );
+}
+
+/**
+ * Sunucu kartı — terminal açık değilken ana ekranın birincil öğesi.
+ *
+ * Kartın gövdesi bağlanır, ad kısmı ayrıntıya götürür: en sık yapılan iş
+ * (bağlan) en büyük tıklama hedefi olmalı.
+ */
+function HostCard({
+  host,
+  onConnect,
+  onOpen,
+}: {
+  host: Host;
+  onConnect: () => void;
+  onOpen: () => void;
+}) {
+  const t = useT();
+  const state = useTerminalStore((s) => hostConnectionState(s.tabs, host.id));
+
+  return (
+    <div className="group relative flex flex-col gap-2 bg-surface px-4 py-3 transition-colors hover:bg-surface-2">
+      <div className="flex items-center gap-2">
+        {host.pinned && <PinIcon size={10} className="shrink-0 text-accent" aria-hidden="true" />}
+        <span
+          className={clsx(
+            'h-1.5 w-1.5 shrink-0 rounded-full',
+            state === 'connected' ? 'bg-accent' : state === 'connecting' ? 'bg-warn' : 'bg-danger',
+          )}
+          role="img"
+          aria-label={state === 'connected' ? t('home.connectedLabel') : t('home.disconnectedLabel')}
+        />
+        <button
+          type="button"
+          className="min-w-0 flex-1 truncate text-left font-mono text-[13px] hover:text-accent"
+          onClick={onOpen}
+        >
+          {host.name}
+        </button>
+      </div>
+
+      <p className="truncate font-mono text-[11px] text-fg-dim">
+        {host.effectiveUsername ?? '?'}@{host.hostname}:{host.port}
+      </p>
+
+      {host.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {host.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="pill">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="btn mt-1 w-full justify-center py-1 text-[12px]"
+        onClick={onConnect}
+      >
+        <TerminalIcon size={12} />
+        {t('host.connect')}
+      </button>
     </div>
   );
 }

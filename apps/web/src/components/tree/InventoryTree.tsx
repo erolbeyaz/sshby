@@ -15,10 +15,12 @@ import {
   ChevronRightIcon,
   FolderIcon,
   FolderOpenIcon,
+  FolderPlusIcon,
   GaugeIcon,
   HistoryIcon,
   CopyIcon,
   PencilIcon,
+  PinIcon,
   ServerIcon,
   TerminalIcon,
   Trash2Icon,
@@ -46,11 +48,15 @@ export interface TreeCallbacks {
   onConnectHost: (host: Host) => void;
   onOpenFiles: (host: Host) => void;
   onCloneHost: (host: Host) => void;
+  /** Sabitleme aç/kapa; sabitlenen sunucular listenin başına toplanır. */
+  onTogglePin: (host: Host) => void;
   onOpenMetrics: (host: Host) => void;
   onOpenHistory: (host: Host) => void;
   onEditHost: (host: Host) => void;
   onDeleteHost: (host: Host) => void;
   onEditFolder: (folder: Folder) => void;
+  /** Bu klasörün altına yeni klasör açar. */
+  onAddSubfolder: (folder: Folder) => void;
   onDeleteFolder: (folder: Folder) => void;
   onMove: (input: {
     kind: 'folder' | 'host';
@@ -345,6 +351,21 @@ function FolderNode(props: FolderNodeProps) {
         <RowActions
           onEdit={() => props.onEditFolder(folder)}
           onDelete={() => props.onDeleteFolder(folder)}
+          extra={
+            /* Alt klasör: iç içe yapıyı ağaçtan çıkmadan kurabilmek için. */
+            <button
+              type="button"
+              className="rounded p-1 text-fg-dim hover:bg-line hover:text-fg"
+              onClick={(event) => {
+                event.stopPropagation();
+                props.onAddSubfolder(folder);
+              }}
+              aria-label={t('tree.addSubfolder', { name: folder.name })}
+              title={t('tree.addSubfolder', { name: folder.name })}
+            >
+              <FolderPlusIcon size={12} />
+            </button>
+          }
         />
       </div>
 
@@ -366,11 +387,13 @@ function FolderNode(props: FolderNodeProps) {
                 onConnectHost={props.onConnectHost}
                 onOpenFiles={props.onOpenFiles}
                 onCloneHost={props.onCloneHost}
+                onTogglePin={props.onTogglePin}
                 onOpenMetrics={props.onOpenMetrics}
                 onOpenHistory={props.onOpenHistory}
                 onEditHost={props.onEditHost}
                 onDeleteHost={props.onDeleteHost}
                 onEditFolder={props.onEditFolder}
+                onAddSubfolder={props.onAddSubfolder}
                 onDeleteFolder={props.onDeleteFolder}
                 onMove={props.onMove}
               />
@@ -444,6 +467,14 @@ function HostNode({ host, index, depth, selectedHostId, ...callbacks }: HostNode
           onDoubleClick={() => callbacks.onConnectHost(host)}
           title={`${host.effectiveUsername ?? '?'}@${host.hostname}:${host.port} — ${t(dot.labelKey)}`}
         >
+          {host.pinned && (
+            <PinIcon
+              size={10}
+              className="shrink-0 text-accent"
+              aria-label={t('tree.pinned')}
+              role="img"
+            />
+          )}
           <span
             className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', dot.className)}
             // Renk tek başına bilgi taşımamalı; ekran okuyucu da durumu duysun.
@@ -508,6 +539,17 @@ function HostNode({ host, index, depth, selectedHostId, ...callbacks }: HostNode
           onClick={() => callbacks.onCloneHost(host)}
         />
         <HostAction
+          icon={<PinIcon size={11} />}
+          label={
+            host.pinned
+              ? t('tree.unpinHostAria', { name: host.name })
+              : t('tree.pinHostAria', { name: host.name })
+          }
+          hint={host.pinned ? t('tree.hintUnpin') : t('tree.hintPin')}
+          active={host.pinned}
+          onClick={() => callbacks.onTogglePin(host)}
+        />
+        <HostAction
           icon={<Trash2Icon size={11} />}
           label={t('tree.deleteHostAria', { name: host.name })}
           hint={t('common.delete')}
@@ -524,19 +566,23 @@ function HostAction({
   label,
   hint,
   danger,
+  active,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   hint: string;
   danger?: boolean;
+  /** Aç/kapa eylemlerinde (sabitleme) açık durumu göstermek için. */
+  active?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       className={clsx(
-        'rounded p-1 text-fg-dim/70 transition-colors hover:bg-line',
+        'rounded p-1 transition-colors hover:bg-line',
+        active ? 'text-accent' : 'text-fg-dim/70',
         danger ? 'hover:text-danger' : 'hover:text-accent',
       )}
       onClick={onClick}

@@ -19,11 +19,18 @@ Faz 7 sonrası ayrıca **arayüz iki dilli hale getirildi** (TR/ENG), URL yollar
 ve sekme başlıkları İngilizceye çevrildi, yapılandırma aktarımı ayrı sayfadan
 hesap menüsündeki diyaloğa taşındı ve "powered by erolbeyaz" imzası eklendi.
 
+Ardından **arayüz düzeni yeniden kuruldu**: gezinme sol dikey menüye taşındı,
+bölümler sağa açılan panelde gösteriliyor, sunucu formu bölümlere ayrıldı,
+klasör seçici aranabilir/oluşturulabilir hâle geldi ve klasör içinde klasör
+açmak ağaçtan da form üzerinden de mümkün. `hosts` tablosuna `notes` ve
+`pinned` eklendi (migration `0004`).
+
 ## Şu anda eksik olan
 
 - **Arayüz tarayıcıda elle görülmedi.** Tip denetimi, derleme ve dağıtılan
-  paket içeriği doğrulandı, API 29/29 geçti; dil değiştirme, yapılandırma
-  diyaloğu ve imzanın görsel teyidi kullanıcıda.
+  paket içeriği doğrulandı; API tarafı 29/29 + 12/12 geçti. Yeni düzenin
+  (sol menü, panel, sunucu formu, klasör seçici), dil değiştirmenin ve
+  imzanın görsel teyidi kullanıcıda.
 - **Sunucudan gelen serbest metinler çevrilmiyor** — içe aktarma raporundaki
   uyarılar ve gönderici durum mesajları Türkçe üretiliyor. Kayıt adları
   içerdikleri için şablonlanmaları gerekir.

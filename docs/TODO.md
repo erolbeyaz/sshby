@@ -21,6 +21,9 @@ Ayrıntılar için `CURRENT_STATE.md`:
 - **Komut geçmişi** — sunucu başına panel, kaynak `audit_outbox`
 - **İki dilli arayüz** — TR/ENG seçici, İngilizce URL ve sekme başlıkları,
   hesap menüsüne taşınan yapılandırma aktarımı, "powered by erolbeyaz" imzası
+- **Arayüz düzeni** — sol dikey bölüm menüsü ve açılır panel, bölümlenmiş
+  sunucu formu, aranabilir/oluşturulabilir klasör seçici, klasör içinde
+  klasör, sunucu notu ve sabitleme
 
 Faz 6'dan kalan tek iş:
 

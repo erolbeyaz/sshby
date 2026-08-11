@@ -24,13 +24,26 @@ export const tr = {
 
   // --------------------------------------------------------------- gezinme
   'nav.terminal': 'Terminal',
-  'nav.vault': 'Kasa',
+  'nav.vault': 'Kimlik Bilgileri',
   'nav.connections': 'Bağlantılar',
   'nav.quickConnect': 'Hızlı bağlantı',
   'nav.hostCount': '{n} sunucu',
   'nav.auditOn': 'denetim açık',
   'nav.auditOff': 'denetim kapalı',
   'nav.language': 'Dil',
+  'nav.hosts': 'Ana Bilgisayarlar',
+  'nav.sections': 'Bölümler',
+  'nav.collapsePanel': 'Paneli daralt',
+
+  // ----------------------------------------------------------- klasör seçici
+  'folderPicker.none': 'Klasör yok',
+  'folderPicker.searchOrCreate': 'Ara veya oluştur (alt klasör için seç)',
+  'folderPicker.create': '"{name}" klasörünü oluştur',
+  'folderPicker.noMatch': 'Eşleşen klasör yok',
+
+  // ------------------------------------------------------------- kasa paneli
+  'vaultPanel.search': 'Kimlik bilgisi ara…',
+  'vaultPanel.noMatch': 'Eşleşen kayıt yok.',
 
   // ------------------------------------------------------------------ giriş
   'auth.firstRunNotice':
@@ -87,6 +100,9 @@ export const tr = {
   'home.actionConnectDesc': 'Soldaki ağaçtan çift tıklayın',
   'home.actionConfig': 'Yapılandırma aktarımı',
   'home.actionConfigDesc': 'Yedek al ya da geri yükle',
+  'home.myServers': 'Sunucularım',
+  'home.actionInventory': 'Envanteri aç',
+  'home.actionInventoryDesc': 'Klasörler ve sunucu ağacı',
   'home.hostStatus': 'Sunucu durumu',
   'home.connectedRatio': '{online}/{total} bağlı',
   'home.noHosts': 'Henüz sunucu yok. Soldaki ağaçtan ekleyebilirsiniz.',
@@ -136,7 +152,7 @@ export const tr = {
   'host.noneSelected': 'seçilmedi',
 
   // ------------------------------------------------------------------- kasa
-  'vault.eyebrow': 'Kasa',
+  'vault.eyebrow': 'Kimlik Bilgileri',
   'vault.title': 'Kimlik bilgileri',
   'vault.intro':
     'Parolalar ve SSH anahtarları AES-256-GCM ile şifrelenerek saklanır. Kaydedildikten sonra hiçbir ekrandan geri okunamaz — yalnızca üzerine yazılabilir.',
@@ -358,6 +374,12 @@ export const tr = {
   'tree.hintMetrics': 'Metrikler',
   'tree.hintHistory': 'Geçmiş',
   'tree.hintClone': 'Kopyala',
+  'tree.addSubfolder': '{name} içine alt klasör ekle',
+  'tree.pinned': 'sabitlendi',
+  'tree.pinHostAria': '{name} sunucusunu sabitle',
+  'tree.unpinHostAria': '{name} sabitlemesini kaldır',
+  'tree.hintPin': 'Sabitle',
+  'tree.hintUnpin': 'Sabitlemeyi kaldır',
 
   // ------------------------------------------------------------- sağ tık menüsü
   'ctx.copy': 'Kopyala',
@@ -488,6 +510,8 @@ export const tr = {
   'folder.color': 'Renk',
   'folder.noColor': 'Renksiz',
   'folder.colorAria': 'Renk {color}',
+  'folder.parent': 'Üst klasör',
+  'folder.parentHint': 'Bir klasörün altını seçerek iç içe klasör oluşturabilirsiniz.',
 
   // --------------------------------------------------------- sunucu diyaloğu
   'hostDialog.editTitle': 'Sunucuyu düzenle',
@@ -507,6 +531,17 @@ export const tr = {
   'hostDialog.tags': 'Etiketler',
   'hostDialog.tagsHint': 'virgülle ayırın',
   'hostDialog.tagsPlaceholder': 'üretim, k8s',
+  'hostDialog.protocols': 'Protokoller',
+  'hostDialog.protocolSsh': 'Güvenli kabuk',
+  'hostDialog.sshOnly': 'sshby yalnızca SSH konuşur',
+  'hostDialog.connectionDetails': 'Bağlantı ayrıntıları',
+  'hostDialog.friendlyName': 'Kolay ad',
+  'hostDialog.friendlyNamePlaceholder': 'örn. Üretim web sunucusu',
+  'hostDialog.folderAndAdvanced': 'Klasör ve gelişmiş',
+  'hostDialog.notes': 'Özel notlar',
+  'hostDialog.notesPlaceholder': 'Bu sunucuyla ilgili ayrıntılar…',
+  'hostDialog.pin': 'Üstte sabitle',
+  'hostDialog.pinHint': 'Sabitlenen sunucular ağacın en üstünde toplanır.',
 
   // ------------------------------------------------------------ yan ağaç
   'sidebar.servers': 'Sunucular',

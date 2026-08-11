@@ -17,7 +17,8 @@ Bugün çalışan özellikler:
   gerektiren dizinler için sudo modu
 - **Sunucu metrik paneli** — CPU, bellek, disk, ağ, işlemler, portlar; ajan
   kurulumu gerektirmez
-- **Klasör yapısı** — sunucuları sürükle-bırak ile düzenleme
+- **Klasör yapısı** — iç içe klasörler, sürükle-bırak ile düzenleme, sunucu
+  notu ve üstte sabitleme
 - **Credential kasası** — parola ve SSH anahtarları, AES-256-GCM ile şifreli
 - **Komut geçmişi** — sunucu başına, denetim kaydından türetilir
 - **Hızlı bağlantı** — envantere kaydetmeden tek seferlik erişim

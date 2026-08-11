@@ -283,6 +283,57 @@ kullanıcının kendi envanteri ve kasası; bir uygulama bölümü değil hesap
 işlemi. Çıkışın hemen üstünde duruyor ve rol koşulu yok — her kullanıcı kendi
 verisini aktarır.
 
+## Arayüz düzeni
+
+**Gezinme sol dikey menüde, üst barda değil.** Bölüm sayısı arttıkça yatay
+çubuk dar ekranlarda taşıyordu; dikey liste sınırsız büyüyebiliyor ve her
+öğenin adı görünür kalıyor. Seçili öğe vurgulu durur — panelde ne olduğunu
+menüye bakarak anlamak, panelin başlığını okumaktan hızlı.
+
+**Bölümler panelde açılır, ayrı sayfada değil.** Panel `main` alanının dışında
+yaşıyor; kasaya ya da bağlantılara bakmak terminali söktürmüyor. Aynı öğeye
+tekrar tıklamak paneli kapatır: tek düğmeyle aç/kapa, ayrı bir kapatma
+hedefi aramaya gerek bırakmıyor.
+
+**Panel açıklığı tek kaynakta (`workspace-store.nav`).** Önce her panelin
+kendi `open` bayrağı vardı; menüdeki vurgu ile panelin gerçek durumu
+ayrışabiliyordu. Tek bir `nav` alanı bu ikiliği ortadan kaldırdı.
+
+**Sunucu formu bölümlere ayrıldı.** Tek uzun liste hâlindeyken kullanıcı hangi
+alanın zorunlu, hangisinin isteğe bağlı olduğunu ayırt edemiyordu; başlıklar
+(protokoller / bağlantı ayrıntıları / klasör ve gelişmiş) bu ayrımı görsel
+yapıyor.
+
+**Devre dışı protokol kartı konmadı.** Örnek aldığımız arayüzde RDP/VNC/Telnet
+kartları kapalı hâlde duruyor. sshby yalnızca SSH konuşuyor; kapalı bir kart
+koymak var olmayan bir özelliği "yakında" gibi göstermek olurdu. Yerine tek
+SSH kartı ve bunu söyleyen bir not var.
+
+**MAC adresi alanı eklenmedi.** Örnekte var ama oradaki işlevi Wake-on-LAN;
+sshby uzaktan makine uyandırmıyor, dolayısıyla alan hiçbir yerde
+kullanılmayacak ölü veri olurdu.
+
+**Klasör seçici arar ve oluşturur.** Düz bir `<select>` iç içe klasörlerde
+çalışmıyordu: iki ayrı dalda aynı adlı klasör ayırt edilemiyordu. Seçici her
+klasörü tam yoluyla ("Üretim › Veritabanı") gösteriyor ve eşleşme yoksa
+yazılan adı doğrudan oluşturuyor — kullanıcı sunucu formunu terk edip klasör
+açıp geri dönmek zorunda kalmasın diye. Yeni klasör, o an seçili klasörün
+altına açılır.
+
+**Not ve sabitleme sunucu kaydına eklendi.** `notes`: bağlantı bilgisi olmayan
+ama bağlanırken bilinmesi gereken şeyler (bakım penceresi, sahibi, hangi
+uygulamayı çalıştırdığı) hiçbir yere yazılamıyordu, kullanıcılar bunu ad
+alanına sıkıştırıyordu. `pinned`: envanter büyüdükçe her seferinde aynı üç
+sunucuyu aramak gerekiyordu. Sıralama `pinned desc, sort_index asc` —
+sabitlenenler kendi aralarındaki sürükle-bırak sırasını korur.
+
+**Kopyalanan sunucu sabitlemeyi devralmaz.** Sabitleme kullanıcının o kayda
+özel tercihi; kopya ile birlikte çoğalması listenin başını doldururdu. Not
+devralınır, çünkü kopyanın konusu genelde aynı makinedir.
+
+**Paketteki `notes`/`pinned` isteğe bağlı.** Zorunlu yapmak, önceki sürümle
+alınmış her yapılandırma paketini okunamaz kılardı.
+
 ## Sonradan düzeltilenler (tekrarlanmasın)
 
 | hata | kök neden |

@@ -99,6 +99,13 @@ export const exportedHostSchema = z.object({
   username: z.string().nullable(),
   credentialId: z.string().uuid().nullable(),
   defaultPath: z.string().nullable(),
+  /**
+   * Not ve sabitleme sonradan eklendi; eski paketlerde bulunmadıkları için
+   * isteğe bağlı. Zorunlu yapmak, önceki sürümle alınmış her paketi
+   * okunamaz kılardı.
+   */
+  notes: z.string().nullable().optional(),
+  pinned: z.boolean().optional(),
   tags: z.array(z.string()),
   jumpHostId: z.string().uuid().nullable(),
   sortIndex: z.number().int(),

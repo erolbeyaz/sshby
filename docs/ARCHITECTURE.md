@@ -39,7 +39,8 @@ apps/
                       inventory, config, terminal, sftp, metrics, history
   web/                React 18 + Vite + Tailwind
     src/
-      components/     layout/, terminal/, sftp/, metrics/, history/, tree/,
+      components/     layout/ (SideNav, SidePanel ve panel içerikleri),
+                      terminal/, sftp/, metrics/, history/, tree/,
                       dialogs/, ui/, brand/
       lib/            api istemcisi, zustand store'ları, react-query kancaları,
                       i18n katmanı ve locales/ sözlükleri
@@ -62,7 +63,7 @@ Kubernetes dağıtımı (`deploy/helm`) **henüz yok** — Faz 8'in konusu.
 | `users` | rol (`admin`/`user`), argon2id parola özeti, kilitleme sayaçları |
 | `auth_sessions` | refresh token'ın SHA-256 özeti; tekil oturum iptali için |
 | `folders` | kendine referanslı ağaç, `sort_index` ile sıralama |
-| `hosts` | `username` NULL olabilir → kimlik bilgisinden devralınır; `ephemeral` = hızlı bağlantı kaydı |
+| `hosts` | `username` NULL olabilir → kimlik bilgisinden devralınır; `ephemeral` = hızlı bağlantı kaydı; `notes` serbest metin, `pinned` listenin başına toplar |
 | `credentials` | zarf şifrelemeli gizli veri; sahibe özel; `ephemeral` = hızlı bağlantıya ait |
 | `host_keys` | TOFU kayıtları, kullanıcı × adres × port benzersiz |
 | `app_settings` | anahtar/değer; Elasticsearch yapılandırması burada |
@@ -190,6 +191,27 @@ Komut kaydı sezgiseldir ve sınırları `lib/ssh/command-recorder.ts` başında
 yazılıdır. Doğru yapmak zorunda olduğu üç şey: parolaları kaydetmemek, tam
 ekran uygulama içindeki tuşları komut saymamak, yapıştırılan komutları
 kaçırmamak.
+
+## Arayüz kabuğu
+
+```
+┌──────────┬─────────────┬──────────────────────────────┐
+│ SideNav  │ SidePanel   │ main                         │
+│ bölümler │ hosts /     │ ┌──────────────────────────┐ │
+│ (dikey)  │ credentials │ │ TerminalWorkspace (kalıcı)│ │
+│          │ connections │ ├──────────────────────────┤ │
+│          │ quick       │ │ sayfa katmanı (router)   │ │
+└──────────┴─────────────┴──────────────────────────────┘
+```
+
+`SideNav` bölüm seçer, `SidePanel` seçili bölümün içeriğini gösterir. Panel
+`main`in dışında: kasaya ya da bağlantılara bakmak terminali söktürmez.
+Hangi bölümün açık olduğu tek bir yerde tutulur (`workspace-store.nav`);
+`null` paneli kapatır ve seçim `localStorage`da saklanır.
+
+Panel içerikleri (`HostsPanel`, `CredentialsPanel`, `ConnectionsPanel`,
+`QuickConnectPanel`) yalnızca içerik üretir — başlık, kapatma düğmesi ve
+genişlik `SidePanel` kabuğunda, her bölümde aynı davransın diye.
 
 ## Ön yüz durum yönetimi
 

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { Folder } from '@sshby/shared';
+import { FolderPicker } from '@/components/ui/FolderPicker';
 import { Modal } from '@/components/ui/Modal';
 import { useApiError, useT } from '@/lib/i18n';
 import { useCreateFolder, useUpdateFolder } from '@/lib/queries';
@@ -9,11 +10,15 @@ const COLORS = ['#10B981', '#6E5AE6', '#D8A657', '#E06C6C', '#7DAEA3', '#8A8A8A'
 
 export function FolderDialog({
   folder,
+  folders,
   parentId,
   onClose,
 }: {
   /** null = yeni klasör */
   folder: Folder | null;
+  /** Üst klasör seçicisini doldurmak için tüm ağaç. */
+  folders: Folder[];
+  /** Yeni klasörün açılacağı üst klasör; düzenlemede mevcut üst klasör. */
   parentId: string | null;
   onClose: () => void;
 }) {
@@ -24,6 +29,7 @@ export function FolderDialog({
 
   const [name, setName] = useState(folder?.name ?? '');
   const [color, setColor] = useState<string | null>(folder?.color ?? null);
+  const [parent, setParent] = useState<string | null>(parentId);
   const [error, setError] = useState<string | null>(null);
 
   const busy = createFolder.isPending || updateFolder.isPending;
@@ -38,8 +44,16 @@ export function FolderDialog({
     }
 
     try {
-      if (folder) await updateFolder.mutateAsync({ id: folder.id, name: name.trim(), color });
-      else await createFolder.mutateAsync({ name: name.trim(), parentId, color });
+      if (folder) {
+        await updateFolder.mutateAsync({
+          id: folder.id,
+          name: name.trim(),
+          color,
+          parentId: parent,
+        });
+      } else {
+        await createFolder.mutateAsync({ name: name.trim(), parentId: parent, color });
+      }
       onClose();
     } catch (err) {
       setError(apiError(err));
@@ -71,6 +85,23 @@ export function FolderDialog({
             placeholder={t('folder.namePlaceholder')}
           />
         </label>
+
+        {/*
+          Üst klasör seçilebilir olduğu için klasör içinde klasör açmak forma
+          girmeden de mümkün: ağaçtaki bir klasörün "alt klasör ekle" eylemi
+          burayı önceden doldurur. Düzenlemede aynı alan klasörü başka bir dala
+          taşımaya yarar; kendi alt ağacı seçeneklerden çıkarılır.
+        */}
+        <div>
+          <span className="mb-1.5 block text-[13px] font-medium">{t('folder.parent')}</span>
+          <FolderPicker
+            folders={folders}
+            value={parent}
+            onChange={setParent}
+            excludeSubtreeOf={folder?.id ?? null}
+          />
+          <span className="mt-1 block text-[12px] text-fg-dim">{t('folder.parentHint')}</span>
+        </div>
 
         <div>
           <span className="mb-2 block text-[13px] font-medium">{t('folder.color')}</span>

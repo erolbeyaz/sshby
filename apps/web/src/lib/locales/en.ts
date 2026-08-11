@@ -33,6 +33,19 @@ export const en: Record<keyof typeof tr, string> = {
   'nav.auditOn': 'audit on',
   'nav.auditOff': 'audit off',
   'nav.language': 'Language',
+  'nav.hosts': 'Hosts',
+  'nav.sections': 'Sections',
+  'nav.collapsePanel': 'Collapse panel',
+
+  // ------------------------------------------------------------ folder picker
+  'folderPicker.none': 'No folder',
+  'folderPicker.searchOrCreate': 'Search or create (select for subfolder)',
+  'folderPicker.create': 'Create folder "{name}"',
+  'folderPicker.noMatch': 'No matching folders',
+
+  // ------------------------------------------------------------- vault panel
+  'vaultPanel.search': 'Search credentials…',
+  'vaultPanel.noMatch': 'No matching entries.',
 
   // ------------------------------------------------------------------- auth
   'auth.firstRunNotice':
@@ -89,6 +102,9 @@ export const en: Record<keyof typeof tr, string> = {
   'home.actionConnectDesc': 'Double-click in the tree on the left',
   'home.actionConfig': 'Configuration transfer',
   'home.actionConfigDesc': 'Back up or restore',
+  'home.myServers': 'My servers',
+  'home.actionInventory': 'Open inventory',
+  'home.actionInventoryDesc': 'Folders and the server tree',
   'home.hostStatus': 'Server status',
   'home.connectedRatio': '{online}/{total} connected',
   'home.noHosts': 'No servers yet. You can add one from the tree on the left.',
@@ -359,6 +375,12 @@ export const en: Record<keyof typeof tr, string> = {
   'tree.hintMetrics': 'Metrics',
   'tree.hintHistory': 'History',
   'tree.hintClone': 'Duplicate',
+  'tree.addSubfolder': 'Add a subfolder inside {name}',
+  'tree.pinned': 'pinned',
+  'tree.pinHostAria': 'Pin {name}',
+  'tree.unpinHostAria': 'Unpin {name}',
+  'tree.hintPin': 'Pin',
+  'tree.hintUnpin': 'Unpin',
 
   // ------------------------------------------------------------ context menu
   'ctx.copy': 'Copy',
@@ -489,6 +511,8 @@ export const en: Record<keyof typeof tr, string> = {
   'folder.color': 'Colour',
   'folder.noColor': 'No colour',
   'folder.colorAria': 'Colour {color}',
+  'folder.parent': 'Parent folder',
+  'folder.parentHint': 'Pick a folder to nest this one inside it.',
 
   // ----------------------------------------------------------- host dialog
   'hostDialog.editTitle': 'Edit server',
@@ -508,6 +532,17 @@ export const en: Record<keyof typeof tr, string> = {
   'hostDialog.tags': 'Tags',
   'hostDialog.tagsHint': 'separate with commas',
   'hostDialog.tagsPlaceholder': 'production, k8s',
+  'hostDialog.protocols': 'Protocols',
+  'hostDialog.protocolSsh': 'Secure shell',
+  'hostDialog.sshOnly': 'sshby speaks SSH only',
+  'hostDialog.connectionDetails': 'Connection details',
+  'hostDialog.friendlyName': 'Friendly name',
+  'hostDialog.friendlyNamePlaceholder': 'e.g. Production web server',
+  'hostDialog.folderAndAdvanced': 'Folder and advanced',
+  'hostDialog.notes': 'Custom notes',
+  'hostDialog.notesPlaceholder': 'Details about this server…',
+  'hostDialog.pin': 'Pin to top',
+  'hostDialog.pinHint': 'Pinned servers are gathered at the top of the tree.',
 
   // --------------------------------------------------------------- sidebar
   'sidebar.servers': 'Servers',

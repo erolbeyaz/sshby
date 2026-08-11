@@ -138,6 +138,8 @@ export async function registerConfigRoutes(app: FastifyInstance): Promise<void> 
       credentialId:
         row.credentialId && exportedCredentialIds.has(row.credentialId) ? row.credentialId : null,
       defaultPath: row.defaultPath,
+      notes: row.notes,
+      pinned: row.pinned,
       tags: row.tags,
       jumpHostId: row.jumpHostId && exportedHostIds.has(row.jumpHostId) ? row.jumpHostId : null,
       sortIndex: row.sortIndex,
@@ -457,6 +459,8 @@ export async function registerConfigRoutes(app: FastifyInstance): Promise<void> 
               username: host.username,
               credentialId,
               defaultPath: host.defaultPath,
+              notes: host.notes ?? null,
+              pinned: host.pinned ?? false,
               tags: host.tags,
               updatedAt: new Date(),
             })
@@ -480,6 +484,8 @@ export async function registerConfigRoutes(app: FastifyInstance): Promise<void> 
             username: host.username,
             credentialId,
             defaultPath: host.defaultPath,
+            notes: host.notes ?? null,
+            pinned: host.pinned ?? false,
             tags: host.tags,
             // Atlama sunucusu ikinci geçişte bağlanır; hedef sunucu henüz
             // oluşmamış olabilir.

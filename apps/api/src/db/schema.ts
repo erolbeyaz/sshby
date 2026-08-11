@@ -157,6 +157,10 @@ export const hosts = pgTable(
     credentialId: uuid('credential_id').references(() => credentials.id, { onDelete: 'set null' }),
     /** SFTP tarayıcısının açılışta gideceği dizin. */
     defaultPath: text('default_path'),
+    /** Bağlantı bilgisi olmayan ama bağlanırken bilinmesi gereken serbest not. */
+    notes: text('notes'),
+    /** Sabitlenen sunucular ağacın en üstünde toplanır. */
+    pinned: boolean('pinned').notNull().default(false),
     tags: text('tags').array().notNull().default([]),
     jumpHostId: uuid('jump_host_id').references((): AnyPgColumn => hosts.id, {
       onDelete: 'set null',

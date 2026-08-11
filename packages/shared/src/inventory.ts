@@ -75,6 +75,13 @@ export type CreateFolderRequest = z.infer<typeof createFolderSchema>;
 export const updateFolderSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  /**
+   * Üst klasör değiştirilebilir: klasör düzenleme formundaki seçici ile bir
+   * klasörü başka bir klasörün altına almak, sürükle-bırakla aynı işi yapar
+   * ama derin ağaçlarda çok daha kullanışlı. `null` = kök seviye.
+   * Döngü kontrolü sunucuda (`inventory.ts`).
+   */
+  parentId: z.string().uuid().nullable().optional(),
 });
 export type UpdateFolderRequest = z.infer<typeof updateFolderSchema>;
 
@@ -96,6 +103,10 @@ export const hostSchema = z.object({
   effectiveUsername: z.string().nullable(),
   credentialId: z.string().uuid().nullable(),
   defaultPath: z.string().nullable(),
+  /** Bağlantı bilgisi olmayan ama bağlanırken bilinmesi gereken serbest not. */
+  notes: z.string().nullable(),
+  /** Sabitlenen sunucular ağacın en üstünde toplanır. */
+  pinned: z.boolean(),
   tags: z.array(z.string()),
   jumpHostId: z.string().uuid().nullable(),
   sortIndex: z.number().int(),
@@ -114,6 +125,8 @@ export const hostInputSchema = z.object({
   credentialId: z.string().uuid().nullable().optional(),
   folderId: z.string().uuid().nullable().optional(),
   defaultPath: z.string().max(4096).nullable().optional(),
+  notes: z.string().max(4096).nullable().optional(),
+  pinned: z.boolean().optional(),
   tags: z.array(z.string().max(32)).max(20).default([]),
   jumpHostId: z.string().uuid().nullable().optional(),
 });
