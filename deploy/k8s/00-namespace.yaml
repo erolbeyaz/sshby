@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+    # Pod Security Admission: uygulama pod'ları root'suz ve yetkisiz çalışıyor,
+    # bu yüzden en katı profil uygulanabiliyor. Postgres bu profile uymadığı
+    # için (aşağıda gerekçesi) ayrı bir namespace'e ya da dış veritabanına
+    # taşınması gerekirse `restricted` yerine `baseline` yapın.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

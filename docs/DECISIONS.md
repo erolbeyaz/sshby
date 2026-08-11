@@ -41,6 +41,49 @@ değiştirmek konteyner yeniden başlatmayı gerektirmiyor.
 bir adım olmalı (`SSHBY_BIND_ADDRESS=0.0.0.0`): uygulama oturum çerezleri, SSH
 parolaları ve dosya içerikleri taşıyor ve TLS'i kendisi sonlandırmıyor.
 
+**Veritabanı parolası URL-güvenli olmalı.** `DATABASE_URL`'e gömüldüğü için
+base64 alfabesindeki `/` adresi bölüyor ve `pg` kullanıcı adını host sanıyor.
+Sinsi tarafı, Postgres konteynerinin sağlıklı başlaması: parolayı ortam
+değişkeninden alıyor, adresten değil. Hata yalnızca migration aşamasında ve
+`getaddrinfo EAI_AGAIN` gibi ilgisiz görünen bir mesajla ortaya çıkıyor.
+Öneri `openssl rand -hex`.
+
+## Kubernetes
+
+**Kayıt defteri adresi kustomize'ın `images:` bölümünde, manifest'lerde değil.**
+Manifest'ler `sshby-api` / `sshby-web` kısa adlarını taşıyor; Harbor (ya da
+başka bir kayıt defteri) yolu `kustomization.yaml`da tek yerde duruyor. Aksi
+hâlde kayıt defterini değiştirmek üç dosyada arama-değiştirme demekti ve biri
+unutulduğunda hata ancak pod çekilemediğinde görülüyordu.
+
+**`api` tek kopya (`replicas: 1`, `strategy: Recreate`).** SSH oturumları süreç
+belleğinde yaşıyor. Terminal WebSocket'i bir pod'a bağlanıp orada kalıyor, sorun
+değil — ama SFTP, metrik ve komut geçmişi HTTP üzerinden geliyor ve istek başka
+bir pod'a düşerse orada o oturum yok: SFTP açık terminalden bağlantı ödünç
+alamıyor, kasadaki kimlikle yeniden bağlanmaya çalışıyor ve etkileşimli
+parolayla açılmış oturumlarda bu imkânsız (parolayı saklamıyoruz). Sudo parolası
+da süreç belleğinde.
+
+`sessionAffinity: ClientIP` kısmi çare olurdu ama proxy arkasındaki NAT'lı
+istemcilerde güvenilmez. Gerçek çözüm oturum durumunu paylaşmak — yapılmadı.
+`RollingUpdate` yerine `Recreate`, çünkü tek kopyada bile yükseltme anında iki
+pod'u yan yana çalıştırıp aynı sorunu üretiyordu. Denetim kuyruğu ölçeklemeye
+hazır (`for update skip locked`); darboğaz orada değil.
+
+**Sıralama `initContainer`larla kuruldu, apply sırasıyla değil.** Compose'daki
+`service_completed_successfully` bağımlılığının Kubernetes karşılığı yok.
+Migration Job'u postgres'i, `api` de `schema_migrations` tablosunun varlığını
+bekliyor. Böylece `kubectl apply -k` tek komutla ve sıra gözetmeden
+çalışabiliyor; uygulama hiçbir zaman eksik şemayla açılmıyor.
+
+**Migration Job'unda `ttlSecondsAfterFinished`.** Job'un `spec`i değiştirilemez,
+aynı adla ikinci kez apply etmek hata veriyor. TTL bitince Job kendini siliyor
+ve bir sonraki yükseltmede aynı dosya sorunsuz uygulanabiliyor.
+
+**`commonLabels` yerine `labels`.** Eskisi etiketleri Deployment ve StatefulSet
+selector'larına da ekliyordu; selector değiştirilemez bir alan olduğu için var
+olan bir kuruluma sonradan etiket eklemek `kubectl apply`i kırıyordu.
+
 **Elle yazılmış SQL migration'lar, drizzle-kit üretimi değil.** Şemanın ne zaman
 ne olacağı gözle görülür, üretimde sürpriz DDL çıkmaz. Şema tipleri yine
 `schema.ts`ten gelir; `schema.ts` ve `migrations/*.sql` **elle birlikte**

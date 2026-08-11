@@ -31,10 +31,16 @@ Bugün çalışan özellikler:
   paroladan türetilen anahtarla şifrelenir.
 - **İki dilli arayüz** — Türkçe ve İngilizce, üst bardan anında değişir
 
-Planlanan (henüz yok):
+## Dağıtım
 
-- **Kubernetes manifest'leri** — Faz 8b. Tek makine Docker kurulumu hazır:
-  [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+| Ortam | Nasıl |
+|---|---|
+| Tek makine (Docker) | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) |
+| Kubernetes | [`deploy/k8s/README.md`](deploy/k8s/README.md) — `kubectl apply -k deploy/k8s` |
+
+Elasticsearch her iki dağıtımda da **kurulmuyor**: denetim akışı var olan bir
+kümeye gönderiliyor ve hedef uygulamanın içinden yapılandırılıyor. ES olmadan
+da tam çalışır.
 
 ## Belgeler
 
@@ -46,6 +52,8 @@ Planlanan (henüz yok):
 | [docs/DECISIONS.md](docs/DECISIONS.md) | kararlar ve gerekçeleri |
 | [docs/TODO.md](docs/TODO.md) | kalan fazlar ve teknik borç |
 | [docs/NEXT_SESSION.md](docs/NEXT_SESSION.md) | yeni bir oturum nereden devam etmeli |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker ile kurulum ve işletim |
+| [deploy/k8s/README.md](deploy/k8s/README.md) | Kubernetes kurulumu |
 
 Yeni bir oturuma başlarken önce `docs/CURRENT_STATE.md` ve `AGENTS.md` okuyun.
 Bu dosya (README) genel proje tanıtımıdır; çalışma durumunun doğruluk kaynağı
@@ -104,7 +112,8 @@ apps/api          Fastify + ssh2 — REST, WebSocket terminal, SFTP, metrikler
 apps/web          React + Vite + Tailwind + xterm.js
 packages/shared   İki tarafın da kullandığı zod şemaları ve tipler
 deploy/docker     Dockerfile'lar ve nginx yapılandırması
-deploy/compose    Yerel geliştirme / tek makine ortamı
+deploy/compose    Yerel geliştirme ve tek makine üretim ortamı
+deploy/k8s        Kubernetes manifest'leri (kustomize, Helm yok)
 docs              Mimari, kararlar, mevcut durum, yapılacaklar
 sshby-images      Marka varlıkları ve marka panosu
 ```
@@ -172,7 +181,7 @@ verir; değişiklik için yeni numaralı bir dosya ekleyin.
 | Faz 6 | Elasticsearch denetim akışı                       | tamam   |
 | Faz 7 | Yapılandırma dışa/içe aktarma                     | tamam   |
 | Faz 8a| Tek makine Docker dağıtımı                        | tamam   |
-| Faz 8b| Kubernetes manifest'leri (Helm yok)               | **sırada** |
+| Faz 8b| Kubernetes manifest'leri (Helm yok)               | tamam   |
 | Faz 9 | Keycloak / OIDC entegrasyonu                      | plan dışı, sonraki aşama |
 
 Güncel durum ve bilinen sınırlar için: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).

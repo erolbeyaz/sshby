@@ -15,7 +15,8 @@ Son güncelleme: 2026-08-11
 | 6 | Elasticsearch denetim akışı | tamam |
 | 7 | Yapılandırma dışa/içe aktarma | tamam |
 | 8a | Tek makine Docker dağıtımı | tamam |
-| 8b | Kubernetes manifest'leri (Helm yok) | **sırada** |
+| 8b | Kubernetes manifest'leri (Helm yok) | tamam — kümede sınanmadı |
+| 8c | Kalan sıkılaştırma (rate limit, yedek, NetworkPolicy) | **sırada** |
 | 9 | Keycloak/OIDC | plan dışı, sonraki aşama |
 
 ## Çalışan özellikler
@@ -209,9 +210,12 @@ yazılması, UTF-8'in çerçeve sınırında bölünse bile bozulmaması.
   Bu yüzden gönderilmiş satırlar 30 gün saklanıyor
   (`AUDIT_RETAIN_SHIPPED_MS`), hemen silinmiyor. Daha uzun arşiv
   Elasticsearch'ün işi.
-- **Kubernetes manifest'leri yok.** Tek makine Docker dağıtımı hazır
-  (`docker-compose.prod.yml`, bkz. `docs/DEPLOYMENT.md`); Kubernetes aşaması
-  Faz 8b. Helm kullanılmayacak (gerekçe `DECISIONS.md`).
+- **Kubernetes manifest'leri gerçek kümede sınanmadı.** `deploy/k8s` altında
+  hazır (kustomize ile tek komut) ve resmi şema doğrulamasından geçti, ama
+  hiçbir kümeye uygulanmadı. Helm kullanılmıyor (gerekçe `DECISIONS.md`).
+- **`api` Kubernetes'te tek kopya çalışır.** SSH oturumları süreç belleğinde
+  olduğu için yatay ölçekleme oturum durumunu paylaşmayı gerektiriyor;
+  yapılmadı.
 - **TLS uygulamada sonlandırılmıyor.** Sertifika yönetimi ters proxy'nin işi;
   sshby düz HTTP dinler ve dış adresi `PUBLIC_ORIGIN` ile öğrenir. Pano API'si
   (sağ tık → Yapıştır) bu yüzden yalnızca proxy HTTPS sonlandırdığında çalışır.

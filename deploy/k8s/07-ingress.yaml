@@ -1,0 +1,52 @@
+# ingress-nginx varsayımıyla yazıldı. Başka bir denetleyici (Traefik, HAProxy,
+# bulut sağlayıcı) kullanıyorsanız annotation adları değişir; anlamları aynı.
+#
+# TLS burada sonlandırılıyor. Uygulama düz HTTP dinliyor ve dış adresi
+# ConfigMap'teki PUBLIC_ORIGIN ile öğreniyor — ikisi AYNI host olmalı, yoksa
+# oturum çerezinin `secure` bayrağı yanlış hesaplanır ve giriş sessizce bozulur.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sshby
+  namespace: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+  annotations:
+    # --------------------------------------------------------------- WebSocket
+    # Terminal /ws altında çalışıyor ve oturum saatlerce sessiz kalabilir.
+    # Varsayılan 60 sn'lik okuma zaman aşımı boştaki terminalleri koparıyordu.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '3600'
+
+    # ------------------------------------------------------------------ yükleme
+    # SFTP yüklemeleri gövdede akıyor; varsayılan 1 MB sınırı büyük dosyaları
+    # reddediyordu. Uygulamanın kendi sınırı SFTP_MAX_UPLOAD_BYTES.
+    nginx.ingress.kubernetes.io/proxy-body-size: 2g
+    # Yüklemeyi diske tamponlamadan geçir — bellek ve gecikme için.
+    nginx.ingress.kubernetes.io/proxy-request-buffering: 'off'
+
+    # --------------------------------------------------------------------- TLS
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - sshby.sirket.local
+      # cert-manager kullanmıyorsanız bu Secret'ı elle oluşturun:
+      #   kubectl create secret tls sshby-tls -n sshby --cert=… --key=…
+      secretName: sshby-tls
+  rules:
+    - host: sshby.sirket.local
+      http:
+        paths:
+          # Tek origin: SPA, /api ve /ws aynı hosttan geliyor. Yönlendirme
+          # web katmanındaki nginx'te yapılıyor (nginx.conf), Ingress'te
+          # bölmeye gerek yok — cookie ve CSP tarafı böyle basit kalıyor.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  name: http

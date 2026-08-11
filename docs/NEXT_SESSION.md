@@ -2,12 +2,16 @@
 
 ## Aktif faz
 
-**Faz 8b — Kubernetes manifest'leri.** Faz 8a (tek makine Docker dağıtımı)
-tamamlandı.
+**Faz 8c — kalan sıkılaştırma.** 8a (tek makine Docker) ve 8b (Kubernetes
+manifest'leri) tamamlandı.
 
-Faz 8'in kapsamı kullanıcı kararıyla değişti: **Helm kullanılmayacak.** Yerine
-önce Docker ile tam çalışan bir kurulum (bitti), sonra ham Kubernetes
-manifest'leri. Gerekçe `DECISIONS.md` → Altyapı.
+Faz 8'in kapsamı kullanıcı kararıyla değişti: **Helm kullanılmıyor.** Yerine
+Docker ile tam çalışan bir kurulum ve ham Kubernetes manifest'leri (kustomize
+ile tek komut). Gerekçe `DECISIONS.md` → Altyapı.
+
+**Kubernetes manifest'leri hiçbir kümede sınanmadı.** Resmi şema doğrulaması
+(v1.30) ve tutarlılık kontrolleri geçti, `kubectl kustomize` çıktısı üretildi —
+ama gerçek bir kümeye uygulanmadı. İlk deneme kullanıcıda.
 
 ## Mevcut durum
 
@@ -45,16 +49,20 @@ açmak ağaçtan da form üzerinden de mümkün. `hosts` tablosuna `notes` ve
 
 ## Sonraki hedefler
 
-Faz 8b kapsamında (ayrıntı: `docs/TODO.md`):
+Faz 8c kapsamında (ayrıntı: `docs/TODO.md`):
 
-- Namespace, Deployment (api/web), Service, Ingress
-- Secret (kök anahtar, JWT, DB parolası) ve ConfigMap
-- Postgres: StatefulSet + PVC mi, dış yönetilen veritabanı mı — karar gerekiyor
-- Migration'lar için Job (deployment öncesi)
-- Prob'lar, kaynak istek/sınırları, PodSecurityContext (non-root, read-only kök)
-- **Sınanacak:** birden çok `api` kopyası. `audit_outbox` `for update skip
-  locked` ile güvenli ama SSH oturumları süreç belleğinde yaşıyor; oturum
-  yapışkanlığı gerekip gerekmediği belirsiz.
+- Rate limit ayarlarını gözden geçir
+- Yedekleme için CronJob (`pg_dump` komutu dokümanda, zamanlayıcı yok)
+- NetworkPolicy — namespace trafiği kısıtlanmıyor
+- Kibana örnek panosu (Faz 6'dan kalan tek iş)
+
+Sonra **açık kaynak yayına hazırlık** (`TODO.md`): kurumsal CA'yı isteğe bağlı
+yapmak, `AGENTS.md`'deki gerçek e-posta ve test parolalarını temizlemek, lisans
+ve katkı rehberi.
+
+`api` yatay ölçekleme bilinçli olarak ertelendi: oturum durumunu paylaşmak
+(Redis ya da oturumu sahibi pod'a yönlendiren bir katman) gerekiyor. Gerekçe
+`DECISIONS.md` → Kubernetes.
 
 Açık kaynak yayına hazırlık maddeleri (kurumsal CA'yı isteğe bağlı yapma,
 `AGENTS.md`'deki gerçek e-posta ve test parolalarını yer tutucuyla değiştirme)

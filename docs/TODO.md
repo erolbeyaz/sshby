@@ -45,18 +45,32 @@ Yerine önce tek makine Docker dağıtımı, sonra ham Kubernetes manifest'leri.
 - [x] Gizli anahtarlar zorunlu, varsayılansız (`${DEĞİŞKEN:?…}`)
 - [x] `.env.prod.example` ve kurulum/işletim dokümanı (`docs/DEPLOYMENT.md`)
 
-### 8b — Kubernetes manifest'leri
+### 8b — Kubernetes manifest'leri (tamam)
 
-- [ ] Namespace, Deployment (api, web), Service, Ingress
-- [ ] Secret (kök anahtar, JWT, DB parolası), ConfigMap
-- [ ] Postgres: StatefulSet + PVC ya da dış yönetilen veritabanına yönlendirme
-      kararı
-- [ ] Migration'lar için Job (deployment öncesi çalışan)
-- [ ] Liveness/readiness probları, kaynak istekleri ve sınırları,
-      PodSecurityContext (non-root, read-only kök dosya sistemi)
-- [ ] Birden çok `api` kopyası: `audit_outbox` zaten `for update skip locked`
-      ile güvenli, ama SSH oturumları süreç belleğinde — oturum yapışkanlığı
-      (session affinity) gerekip gerekmediği sınanmalı
+- [x] Namespace, Deployment (api, web), Service, Ingress
+- [x] Secret (örnek + komutla oluşturma), ConfigMap
+- [x] Postgres StatefulSet + PVC; dış yönetilen veritabanı için tek satır
+      değişikliği yeterli (`kustomization.yaml`'dan çıkar)
+- [x] Migration'lar için Job (`ttlSecondsAfterFinished` ile tekrar
+      uygulanabilir)
+- [x] Startup/liveness/readiness probları, kaynak istek ve sınırları,
+      PodSecurityContext (non-root, salt okunur kök, `drop: [ALL]`)
+- [x] Kustomize ile tek komut kurulum (`kubectl apply -k deploy/k8s`) ve
+      kayıt defteri adresinin tek yerden yönetimi
+- [x] **Karar verildi:** `api` tek kopya. SSH oturumları süreç belleğinde;
+      SFTP/metrik/geçmiş HTTP istekleri başka pod'a düşerse oturum bulunamıyor
+      ve etkileşimli parolayla açılmış bağlantılar yeniden kurulamıyor.
+      `sessionAffinity: ClientIP` NAT'lı istemcilerde güvenilmez. Gerekçe
+      `deploy/k8s/README.md` ve `DECISIONS.md` içinde.
+
+### 8b sonrası açık kalanlar
+
+- [ ] **Gerçek kümede sınanmadı.** Manifest'ler şema ve tutarlılık
+      doğrulamasından geçti ama hiçbir kümeye uygulanmadı.
+- [ ] **`api` yatay ölçekleme.** Oturum durumunu paylaşmak (Redis ya da
+      oturumu sahibi pod'a yönlendiren bir katman) gerekiyor.
+- [ ] NetworkPolicy — namespace trafiği kısıtlanmıyor
+- [ ] Yedekleme için CronJob (`pg_dump` komutu dokümanda, zamanlayıcı yok)
 
 ### 8c — Kalan sıkılaştırma
 

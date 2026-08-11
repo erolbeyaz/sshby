@@ -1,0 +1,61 @@
+# Tek komutla kurulum:
+#
+#   kubectl apply -k deploy/k8s
+#
+# Sıra sorunu yok: her şey aynı anda uygulansa bile migrate Job'u postgres'i,
+# api de `schema_migrations` tablosunu bekliyor (initContainer'lar). Bu yüzden
+# dosyaları elle sırayla uygulamak zorunda değilsiniz.
+#
+# Secret bilinçli olarak burada DEĞİL: gizli anahtarların bir dosyada durup
+# yanlışlıkla depoya girmesini istemiyoruz. Önce onu oluşturun (README → 2.
+# adım), sonra bu dosyayı uygulayın.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: sshby
+
+resources:
+  - 00-namespace.yaml
+  - 01-configmap.yaml
+  - 03-postgres.yaml
+  - 04-migrate-job.yaml
+  - 05-api.yaml
+  - 06-web.yaml
+  - 07-ingress.yaml
+
+# Yönetilen bir veritabanı kullanıyorsanız `03-postgres.yaml` satırını silin ve
+# Secret'taki DATABASE_URL'i o sunucuya çevirin.
+
+# `commonLabels` yerine `labels`: eskisi etiketleri Deployment/StatefulSet
+# selector'larına da ekliyordu ve selector değiştirilemez bir alan — var olan
+# bir kuruluma sonradan etiket eklemek `kubectl apply`i kırıyordu.
+# `includeSelectors` varsayılan olarak kapalı.
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: sshby
+      app.kubernetes.io/managed-by: kustomize
+
+# ------------------------------------------------------------------- imajlar
+#
+# Manifest'lerdeki `image:` satırlarına DOKUNMAYIN — kayıt defteri adresi
+# yalnızca burada durur. `name` alanı manifest'teki adla eşleşir, `newName`
+# onun yerine geçer.
+#
+# Harbor'da `library` varsayılan projedir; başka bir projeye koyduysanız
+# (örneğin `sshby`) yolu ona göre yazın.
+images:
+  - name: sshby-api
+    newName: harbor.sirket.local/library/sshby-api
+    newTag: '0.1.0'
+  - name: sshby-web
+    newName: harbor.sirket.local/library/sshby-web
+    newTag: '0.1.0'
+
+  # Postgres ve initContainer'ların kullandığı temel imaj. Kümenin Docker
+  # Hub'a erişimi yoksa bunu da Harbor'a kopyalayıp burada gösterin:
+  #   docker pull postgres:16-alpine
+  #   docker tag  postgres:16-alpine harbor.sirket.local/library/postgres:16-alpine
+  #   docker push harbor.sirket.local/library/postgres:16-alpine
+  # - name: postgres
+  #   newName: harbor.sirket.local/library/postgres
+  #   newTag: '16-alpine'

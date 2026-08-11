@@ -1,0 +1,36 @@
+# Gizli olmayan ayarlar. Gizli veri (kök anahtar, JWT, veritabanı adresi)
+# 02-secret içinde.
+#
+# Elasticsearch ayarı burada YOK — bilinçli. Denetim akışının hedefi
+# uygulamanın içinden yapılandırılıyor (Yönetim → Denetim akışı) ve
+# veritabanında `app_settings` tablosunda yaşıyor. Ortam değişkenine koymak
+# ES parolasını `kubectl describe` çıktısında görünür kılardı.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sshby-config
+  namespace: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+data:
+  NODE_ENV: production
+  LOG_LEVEL: info
+  PORT: '3000'
+
+  # Tarayıcının uygulamaya eriştiği kök adres — Ingress'teki host ile aynı
+  # olmalı. Oturum çerezinin `secure` bayrağı buna bakıyor; yanlış değer
+  # oturumu sessizce bozar.
+  PUBLIC_ORIGIN: https://sshby.sirket.local
+  COOKIE_SECURE: auto
+
+  DATABASE_POOL_MAX: '10'
+  SSH_MAX_SESSIONS_PER_USER: '20'
+  SFTP_MAX_UPLOAD_BYTES: '2147483648'
+
+  # true iken denetim Elasticsearch'e yazılamıyorsa yeni SSH oturumu açılmaz
+  # ("kayıt tutulamıyorsa bağlanma" politikası).
+  AUDIT_STRICT_MODE: 'false'
+  # Gönderilmiş denetim satırlarının yerel saklama süresi (30 gün).
+  # Kısaltmayın: komut geçmişi ve gösterge panelindeki etkinlikler bu tablodan
+  # okuyor ve ES açık olmayan kurulumlarda başka kaynak yok.
+  AUDIT_RETAIN_SHIPPED_MS: '2592000000'

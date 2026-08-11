@@ -1,0 +1,102 @@
+# Şema migration'ları.
+#
+# Her sürüm yükseltmesinde api'den ÖNCE çalışmalı, yoksa uygulama eksik şemayla
+# açılır. Compose'daki `service_completed_successfully` bağımlılığının
+# Kubernetes karşılığı yok; sıra `kubectl apply` düzeniyle ve api'nin
+# initContainer'ıyla kuruluyor (05-api.yaml).
+#
+# `ttlSecondsAfterFinished` bilinçli: Job'un `spec`i değiştirilemez, bu yüzden
+# aynı adla ikinci kez apply etmek hata verir. TTL bitince Job kendini siliyor
+# ve bir sonraki yükseltmede aynı dosya sorunsuz uygulanabiliyor. TTL dolmadan
+# yeniden uygulamak isterseniz önce silin:
+#
+#   kubectl delete job sshby-migrate -n sshby --ignore-not-found
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sshby-migrate
+  namespace: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+    app.kubernetes.io/component: migrate
+spec:
+  ttlSecondsAfterFinished: 600
+  # Migration'lar tekrar çalıştırıldığında uygulanmış olanları atlıyor, bu
+  # yüzden yeniden deneme güvenli.
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sshby
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Postgres hazır olmadan başlamak Job'u gereksiz yere başarısız
+        # gösteriyor; backoff da her denemede uzuyor.
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - 'until pg_isready -h postgres -p 5432 -U sshby; do echo "postgres bekleniyor…"; sleep 2; done'
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+      containers:
+        - name: migrate
+          image: sshby-api:latest
+          imagePullPolicy: IfNotPresent
+          command: ['node', 'apps/api/dist/db/migrate.js']
+          envFrom:
+            - configMapRef:
+                name: sshby-config
+          env:
+            # migrate de env doğrulamasından geçtiği için bu üçü burada da
+            # gerekli — yoksa süreç açılışta durur.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: DATABASE_URL
+            - name: SSHBY_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: SSHBY_MASTER_KEY
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: JWT_SECRET
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: tmp
+          emptyDir: {}

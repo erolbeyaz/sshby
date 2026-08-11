@@ -1,0 +1,123 @@
+# Küme içi Postgres.
+#
+# Yönetilen bir veritabanınız varsa (RDS, Cloud SQL, kurumsal Postgres) BU
+# DOSYAYI UYGULAMAYIN: yalnızca Secret'taki DATABASE_URL'i o sunucuya çevirin.
+# Veritabanını kümede taşımak yedekleme, sürüm yükseltme ve nöbet
+# sorumluluğunu da size verir; yönetilen bir hizmet varsa tercih edin.
+#
+# StatefulSet kullanılıyor çünkü Postgres'in kimliği ve diski kalıcı olmalı:
+# Deployment'ın pod'ları birbirinin yerine geçebilir, veritabanınınki geçemez.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+    app.kubernetes.io/component: postgres
+spec:
+  # ClusterIP (headless değil): nginx ve api adı bir kez çözüp önbelleğe alsa
+  # bile Service IP'si sabit kaldığı için pod yeniden başladığında bağlantı
+  # kırılmaz.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: sshby
+    app.kubernetes.io/component: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sshby
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sshby
+        app.kubernetes.io/component: postgres
+    spec:
+      securityContext:
+        # postgres:16-alpine imajında postgres kullanıcısı uid/gid 70.
+        runAsUser: 70
+        runAsGroup: 70
+        runAsNonRoot: true
+        # Kalıcı diskin sahipliği bu gruba verilir, yoksa initdb yazamaz.
+        fsGroup: 70
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_USER
+              value: sshby
+            - name: POSTGRES_DB
+              value: sshby
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: POSTGRES_PASSWORD
+            # Veri dizini mount noktasının ALT dizini olmalı: bazı depolama
+            # sınıfları mount kökünde `lost+found` bırakıyor ve initdb "dizin
+            # boş değil" diyerek duruyor.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ['sh', '-c', 'pg_isready -U sshby -d sshby']
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ['sh', '-c', 'pg_isready -U sshby -d sshby']
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            # readOnlyRootFilesystem: false — Postgres çalışma zamanında
+            # /var/run/postgresql ve /tmp'ye yazıyor. Salt okunur kök için her
+            # birine ayrı emptyDir gerekir; kazancı, taşıdığı karmaşıklığı
+            # haklı çıkarmıyor.
+            readOnlyRootFilesystem: false
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        # storageClassName: kümenizin varsayılanı kullanılır. Belirli bir sınıf
+        # gerekiyorsa burada açın:
+        # storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 20Gi

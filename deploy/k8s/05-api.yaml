@@ -1,0 +1,180 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+    app.kubernetes.io/component: api
+spec:
+  # Servis adı `api` OLMAK ZORUNDA: web imajındaki nginx.conf
+  # `upstream sshby_api { server api:3000; }` yazıyor ve adres imaja gömülü.
+  # Adı değiştirmek istiyorsanız nginx.conf'u ConfigMap ile ezmeniz gerekir.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: sshby
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: sshby
+  labels:
+    app.kubernetes.io/name: sshby
+    app.kubernetes.io/component: api
+spec:
+  # ------------------------------------------------------------------ replicas
+  #
+  # TEK KOPYA. Ölçeklemeden önce okuyun:
+  #
+  # SSH oturumları süreç belleğinde yaşıyor (`session-registry.ts`). İkinci bir
+  # kopya eklenirse:
+  #   - Terminal WebSocket'i bir pod'a bağlanır ve orada kalır (sorun yok).
+  #   - Ama SFTP, metrik ve komut geçmişi HTTP üzerinden geliyor. İstek başka
+  #     bir pod'a düşerse o pod'da oturum yoktur; SFTP açık terminalden
+  #     bağlantı ödünç alamaz ve kasadaki kimlikle yeniden bağlanmaya çalışır.
+  #     Etkileşimli parolayla açılmış oturumlarda bu imkânsız — parolayı
+  #     saklamıyoruz.
+  #   - Sudo parolası da süreç belleğinde; başka pod'da yok.
+  #
+  # `sessionAffinity: ClientIP` kısmi çare olurdu ama aynı kullanıcının farklı
+  # sekmeleri ve proxy arkasındaki NAT'lı istemciler bunu güvenilmez kılıyor.
+  # Gerçek çözüm oturum durumunu paylaşmak (Redis ya da oturumu sahibi pod'a
+  # yönlendiren bir katman) — yapılmadı.
+  #
+  # Denetim kuyruğu ölçeklemeye hazır (`for update skip locked`), darboğaz orada
+  # değil.
+  replicas: 1
+  strategy:
+    # Tek kopyada RollingUpdate iki pod'u kısa süre yan yana çalıştırır ve
+    # yukarıdaki sorunları yükseltme anında üretir. Recreate kesinti getirir
+    # ama davranış öngörülebilir olur (SSH oturumları zaten yükseltmede kopar).
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sshby
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sshby
+        app.kubernetes.io/component: api
+    spec:
+      securityContext:
+        # node:22-bookworm-slim imajındaki `node` kullanıcısı uid/gid 1000.
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Şema hazır olmadan açılmamak için migration tablosunu bekler.
+        # Postgres'in ayakta olması yetmez — Job daha bitmemiş olabilir ve
+        # uygulama eksik şemayla açılırsa hatalar çalışma zamanına yayılır.
+        - name: wait-for-schema
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: POSTGRES_PASSWORD
+          command:
+            - sh
+            - -c
+            - |
+              until psql -h postgres -U sshby -d sshby -tAc \
+                "select 1 from schema_migrations limit 1" >/dev/null 2>&1; do
+                echo "şema bekleniyor (migrate job çalışıyor mu?)…"
+                sleep 3
+              done
+              echo "şema hazır"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+      containers:
+        - name: api
+          image: sshby-api:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: sshby-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: DATABASE_URL
+            - name: SSHBY_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: SSHBY_MASTER_KEY
+            - name: SSHBY_MASTER_KEY_VERSION
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: SSHBY_MASTER_KEY_VERSION
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: sshby-secrets
+                  key: JWT_SECRET
+          ports:
+            - name: http
+              containerPort: 3000
+          startupProbe:
+            # Açılış yavaşsa liveness'ın pod'u öldürmesini engeller.
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+      volumes:
+        # Salt okunur kök dosya sistemi için: Node ve bağımlılıkları geçici
+        # dosya yazabiliyor.
+        - name: tmp
+          emptyDir: {}
+      # SSH oturumları kapanırken temiz kapansın diye biraz süre tanınıyor.
+      terminationGracePeriodSeconds: 30
