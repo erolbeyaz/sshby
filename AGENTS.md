@@ -199,8 +199,34 @@ Tamamlanmış handoff ayrıntılarını zamanla temizleyin.
 5. `CURRENT_STATE`, `TODO`, `ARCHITECTURE`, `DECISIONS`, `README` ve
    `NEXT_SESSION` arasında çelişki kalmadığını kontrol et.
 6. `git diff` üzerinden kod ve doküman değişikliklerini birlikte gözden geçir.
-7. Kullanıcıya bildirirken kısaca söyle: hangi kod değişiklikleri yapıldı,
+7. **Commit'le ve `origin/main`'e pushla** (aşağıdaki bölüm).
+8. Kullanıcıya bildirirken kısaca söyle: hangi kod değişiklikleri yapıldı,
    hangi doğrulamalar çalıştırıldı, hangi doküman dosyaları güncellendi.
+
+## Git
+
+Uzak depo: `https://github.com/erolbeyaz/sshby.git` (**private**), tek dal:
+`main`.
+
+**Her tamamlanan iş push'lanır.** Kullanıcının kalıcı talimatı: çalışma
+bilgisayarı dışında bir kopyanın her zaman güncel olması isteniyor. Bir görev
+"bitti" diye bildirilmeden önce commit ve push yapılmış olmalı.
+
+Kurallar:
+
+- Commit mesajları **Türkçe** (kod yorumlarıyla aynı kural). Ne yapıldığını
+  değil, **neden** yapıldığını da yazın.
+- Kimlik depo düzeyinde ayarlı: `Erol Beyaz <erolbeyaz@gmail.com>`. Global
+  git yapılandırması kurumsal e-posta taşıyor, ona dokunmayın.
+- **Kimlik bilgisi `.git/config`'e yazılmaz.** Push, kimliği tek seferlik URL
+  olarak alan bir komutla yapılır; `--set-upstream` ile token'lı bir URL
+  kaydedilirse `.git/config` içine sızar. Upstream zaten `origin`'e bağlı.
+- Push öncesi staged dosyaları gizli veri için tarayın: `.env`, `*.key`,
+  `*.pem`, `settings.local.json`, token benzeri dizeler. `.gitignore` bunları
+  zaten engelliyor ama tek savunma hattına bel bağlamayın.
+- Depo **private**. Açık kaynak yayınından önce `docs/TODO.md` → "açık kaynak
+  yayına hazırlık" maddeleri (bu dosyadaki gerçek e-posta ve test parolaları
+  dahil) tamamlanmalı.
 
 ### Oturum devri
 
