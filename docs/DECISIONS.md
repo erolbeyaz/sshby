@@ -5,8 +5,41 @@ ve bir bedeli var; değiştirmeden önce bedelini okuyun.
 
 ## Altyapı
 
-**Docker Compose ile geliştirme, Helm ile üretim.** Kullanıcının hedefi
-Kubernetes. Compose tek makinede hızlı döngü sağlıyor, Helm chart'ı Faz 8'de.
+**Docker Compose ile hem geliştirme hem üretim; Kubernetes'e ham manifest ile.**
+
+Önceki karar "Compose ile geliştirme, Helm ile üretim" idi. Gerekçesi hedefin
+Kubernetes olmasıydı — o hedef değişmedi, ama Helm'in getirdiği şablon katmanı
+(values şeması, chart sürümleme, `helm upgrade` durumu) bu ölçekteki bir
+uygulama için taşınan yükten fazlasını çözmüyordu. Kullanıcı Helm'i öğrenme ve
+bakım maliyetini almak istemedi.
+
+Yerine iki aşama:
+
+1. **Tek makine Docker dağıtımı** (`docker-compose.prod.yml`) — bugün çalışan
+   kurulum şekli. Geliştirme dosyasından ayrı: Elasticsearch/Kibana ve test SSH
+   sunucusu yok, gizli anahtarların varsayılanı yok.
+2. **Kubernetes ham manifest'leri** — Deployment/Service/Ingress/Secret,
+   şablonsuz. Okunabilir, `kubectl apply -f` ile giden, ne yaptığı gözle
+   görülen dosyalar.
+
+**Elasticsearch uygulamayla birlikte kurulmaz.** Üretim compose'unda ES yok;
+denetim var olan bir kümeye gönderiliyor. Kurumlarda ES zaten merkezi bir
+hizmet ve uygulama başına bir küme kaldırmak ne istenen ne de sürdürülebilir.
+ES olmadan da tam çalışır: olaylar veritabanı kuyruğunda birikir.
+
+**Üretimde gizli anahtarların varsayılanı yok.** Compose'un `${DEĞİŞKEN:?mesaj}`
+sözdizimi değer verilmediğinde yığını hata ile durduruyor. Geliştirme
+dosyasındaki `dev-only-…` varsayılanları üretime sızarsa kasa herkesin bildiği
+bir anahtarla şifrelenmiş olurdu; bunun sessizce olabilmesi kabul edilemez.
+
+**ES ayarları ortam değişkeninde değil, veritabanında.** Ortam değişkenindeki
+bir ES parolası `docker inspect` çıktısında ve süreç listesinde görünür. Ayarlar
+`app_settings` tablosunda yaşıyor, parolalar yanıtlarda maskeleniyor ve adres
+değiştirmek konteyner yeniden başlatmayı gerektirmiyor.
+
+**Web varsayılan olarak yalnızca `127.0.0.1`'e bağlanır.** Dışarı açmak bilinçli
+bir adım olmalı (`SSHBY_BIND_ADDRESS=0.0.0.0`): uygulama oturum çerezleri, SSH
+parolaları ve dosya içerikleri taşıyor ve TLS'i kendisi sonlandırmıyor.
 
 **Elle yazılmış SQL migration'lar, drizzle-kit üretimi değil.** Şemanın ne zaman
 ne olacağı gözle görülür, üretimde sürpriz DDL çıkmaz. Şema tipleri yine

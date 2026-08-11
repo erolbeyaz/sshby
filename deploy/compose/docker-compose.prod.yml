@@ -1,0 +1,168 @@
+# sshby — üretim / tek makine Docker dağıtımı.
+#
+#   cd deploy/compose
+#   cp .env.prod.example .env
+#   #  .env içindeki gizli anahtarları üretin (dosyadaki komutlar yazılı)
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Geliştirme dosyasından (docker-compose.yml) üç farkı var:
+#
+#   1. Elasticsearch ve Kibana YOK. Denetim akışı var olan bir ES kümesine
+#      gönderilir; adres, kimlik ve CA uygulamanın içinden yapılandırılır
+#      (Yönetim → Denetim akışı). Bu yüzden burada ES'e dair hiçbir ayar yok —
+#      yapılandırma veritabanında yaşıyor, ortam değişkeninde değil.
+#   2. Test SSH sunucusu YOK.
+#   3. Gizli anahtarların varsayılanı YOK. `${DEĞİŞKEN:?mesaj}` sözdizimi,
+#      değer verilmediğinde compose'u hata ile durdurur. Geliştirme
+#      anahtarlarıyla üretime çıkmak sessizce mümkün olmamalı.
+
+name: sshby
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sshby}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?postgres parolası gerekli}
+      POSTGRES_DB: ${POSTGRES_DB:-sshby}
+      # Türkçe harf sıralaması için; ağaçtaki sunucu adları doğru sıralanır.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-sshby} -d ${POSTGRES_DB:-sshby}']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    # Veritabanı dışarıya açılmaz: yalnızca compose ağındaki servisler erişir.
+    # Yedek almak için `docker compose exec postgres pg_dump …` kullanın.
+    expose:
+      - '5432'
+    networks: [sshby]
+    security_opt: [no-new-privileges:true]
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT:-1g}
+
+  # Şemayı uygulayıp çıkan tek seferlik iş. api bunun başarıyla bitmesini
+  # bekler, böylece uygulama hiçbir zaman eksik şemayla açılmaz.
+  migrate:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    image: sshby-api:${SSHBY_TAG:-latest}
+    command: ['node', 'apps/api/dist/db/migrate.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-sshby}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sshby}
+      # migrate de env doğrulamasından geçtiği için bu ikisi burada da gerekli.
+      SSHBY_MASTER_KEY: ${SSHBY_MASTER_KEY:?kasa kök anahtarı gerekli}
+      JWT_SECRET: ${JWT_SECRET:?jwt gizli anahtarı gerekli}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    networks: [sshby]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    image: sshby-api:${SSHBY_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: '3000'
+      DATABASE_URL: postgres://${POSTGRES_USER:-sshby}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sshby}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+
+      SSHBY_MASTER_KEY: ${SSHBY_MASTER_KEY:?kasa kök anahtarı gerekli}
+      SSHBY_MASTER_KEY_VERSION: ${SSHBY_MASTER_KEY_VERSION:-1}
+      SSHBY_MASTER_KEY_PREVIOUS: ${SSHBY_MASTER_KEY_PREVIOUS:-}
+      JWT_SECRET: ${JWT_SECRET:?jwt gizli anahtarı gerekli}
+
+      # Tarayıcının uygulamaya eriştiği adres. TLS sonlandıran bir ters proxy
+      # varsa onun https adresi yazılmalı: cookie'nin `secure` bayrağı buna
+      # bakıyor ve yanlış değer oturumu sessizce bozar.
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?dış adres gerekli, örn. https://sshby.sirket.local}
+      COOKIE_SECURE: ${COOKIE_SECURE:-auto}
+
+      SSH_MAX_SESSIONS_PER_USER: ${SSH_MAX_SESSIONS_PER_USER:-20}
+      SFTP_MAX_UPLOAD_BYTES: ${SFTP_MAX_UPLOAD_BYTES:-2147483648}
+
+      # Denetim: ES adresi burada değil, uygulamanın yönetim ekranında.
+      # Buradaki tek politika kararı, ES yazılamıyorken bağlanmaya izin verilip
+      # verilmeyeceği.
+      AUDIT_STRICT_MODE: ${AUDIT_STRICT_MODE:-false}
+      AUDIT_RETAIN_SHIPPED_MS: ${AUDIT_RETAIN_SHIPPED_MS:-2592000000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    expose:
+      - '3000'
+    networks: [sshby]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${API_MEMORY_LIMIT:-1g}
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+    image: sshby-web:${SSHBY_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    # Varsayılan olarak yalnızca localhost'a bağlanır. Dışarıdan erişim için
+    # SSHBY_BIND_ADDRESS=0.0.0.0 yapın — ama bunu **TLS sonlandıran bir ters
+    # proxy arkasında** yapın: sshby oturum çerezleri ve SSH parolaları taşıyor,
+    # düz HTTP üzerinde ağı dinleyen herkes okuyabilir.
+    ports:
+      - '${SSHBY_BIND_ADDRESS:-127.0.0.1}:${SSHBY_WEB_PORT:-8088}:8080'
+    networks: [sshby]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${WEB_MEMORY_LIMIT:-256m}
+
+volumes:
+  # Kasadaki şifreli gizli veriler, envanter ve denetim kuyruğu burada.
+  # SSHBY_MASTER_KEY olmadan bu verinin gizli kısmı çözülemez — ikisini
+  # birlikte yedekleyin.
+  postgres-data:
+    name: sshby-postgres-data
+
+networks:
+  sshby:
+    name: sshby
+    driver: bridge

@@ -30,6 +30,7 @@ Depodaki dokümanlar tek başına yeterli olmalı; değilse eksik olan yazılmal
 | `docs/DECISIONS.md` | Neden böyle tasarlandı? |
 | `AGENTS.md` | Bu depoda nasıl çalışılmalı? |
 | `docs/NEXT_SESSION.md` | Bir sonraki oturum nereden devam etmeli? |
+| `docs/DEPLOYMENT.md` | Üretime nasıl kurulur ve işletilir? |
 | `README.md` | Kullanıcı/geliştirici için genel proje görünümü |
 
 **Nihai gerçek koddur** ve gerçekten doğrulanmış çalışma zamanı davranışıdır.
@@ -105,6 +106,10 @@ select h.name, u.email from hosts h join users u on u.id = h.owner_id;
 ```bash
 # Her şeyi derle ve ayağa kaldır (şema değiştiyse ŞART: migrate ayrı imaj)
 docker compose -f deploy/compose/docker-compose.yml up -d --build
+
+# Üretim yığınını denemek (geliştirme ortamını bozmadan):
+#   ayrı proje adı ve ayrı port kullanın, sonra `down -v` ile temizleyin
+#   docker compose -p deneme --env-file <env> -f deploy/compose/docker-compose.prod.yml up -d --build
 
 # Yalnızca tek servis
 docker compose -f deploy/compose/docker-compose.yml up -d --build api

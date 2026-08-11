@@ -2,7 +2,12 @@
 
 ## Aktif faz
 
-**Faz 8 — Dağıtım ve sıkılaştırma.** Henüz başlanmadı.
+**Faz 8b — Kubernetes manifest'leri.** Faz 8a (tek makine Docker dağıtımı)
+tamamlandı.
+
+Faz 8'in kapsamı kullanıcı kararıyla değişti: **Helm kullanılmayacak.** Yerine
+önce Docker ile tam çalışan bir kurulum (bitti), sonra ham Kubernetes
+manifest'leri. Gerekçe `DECISIONS.md` → Altyapı.
 
 ## Mevcut durum
 
@@ -40,14 +45,16 @@ açmak ağaçtan da form üzerinden de mümkün. `hosts` tablosuna `notes` ve
 
 ## Sonraki hedefler
 
-Faz 8 kapsamında (ayrıntı: `docs/TODO.md`):
+Faz 8b kapsamında (ayrıntı: `docs/TODO.md`):
 
-- Helm chart: Deployment, Service, Ingress, Secret, ConfigMap, pre-upgrade
-  migration hook
-- TLS — tarayıcı pano API'sinin (sağ tık → Yapıştır) çalışması için de gerekli
-- Kaynak sınırları, sağlık probları, PodSecurityContext
-- Rate limit ayarlarını gözden geçir
-- Kurulum ve işletim dokümanı
+- Namespace, Deployment (api/web), Service, Ingress
+- Secret (kök anahtar, JWT, DB parolası) ve ConfigMap
+- Postgres: StatefulSet + PVC mi, dış yönetilen veritabanı mı — karar gerekiyor
+- Migration'lar için Job (deployment öncesi)
+- Prob'lar, kaynak istek/sınırları, PodSecurityContext (non-root, read-only kök)
+- **Sınanacak:** birden çok `api` kopyası. `audit_outbox` `for update skip
+  locked` ile güvenli ama SSH oturumları süreç belleğinde yaşıyor; oturum
+  yapışkanlığı gerekip gerekmediği belirsiz.
 
 Açık kaynak yayına hazırlık maddeleri (kurumsal CA'yı isteğe bağlı yapma,
 `AGENTS.md`'deki gerçek e-posta ve test parolalarını yer tutucuyla değiştirme)

@@ -33,7 +33,8 @@ Bugün çalışan özellikler:
 
 Planlanan (henüz yok):
 
-- **Helm chart / Kubernetes dağıtımı** — Faz 8
+- **Kubernetes manifest'leri** — Faz 8b. Tek makine Docker kurulumu hazır:
+  [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ## Belgeler
 
@@ -170,7 +171,8 @@ verir; değişiklik için yeni numaralı bir dosya ekleyin.
 | Faz 5 | Sunucu metrik paneli                              | tamam   |
 | Faz 6 | Elasticsearch denetim akışı                       | tamam   |
 | Faz 7 | Yapılandırma dışa/içe aktarma                     | tamam   |
-| Faz 8 | Helm chart ve dokümantasyon                       | **sırada** |
+| Faz 8a| Tek makine Docker dağıtımı                        | tamam   |
+| Faz 8b| Kubernetes manifest'leri (Helm yok)               | **sırada** |
 | Faz 9 | Keycloak / OIDC entegrasyonu                      | plan dışı, sonraki aşama |
 
 Güncel durum ve bilinen sınırlar için: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).

@@ -32,12 +32,38 @@ Faz 6'dan kalan tek iş:
 
 ## Faz 8 — Dağıtım ve sıkılaştırma (sırada)
 
-- [ ] Helm chart — **`deploy/helm` dizini henüz yok.** Deployment, Service,
-      Ingress, Secret, ConfigMap, pre-upgrade migration hook
-- [ ] TLS — tarayıcı pano API'sinin (sağ tık → Yapıştır) çalışması için de gerekli
-- [ ] Kaynak sınırları, sağlık probları, PodSecurityContext
+**Kapsam değişti:** Helm çıkarıldı. Gerekçe `DECISIONS.md` → Altyapı; özeti,
+Helm'in şablon katmanının bu ölçekte taşıdığı yükten fazlasını çözmemesi.
+Yerine önce tek makine Docker dağıtımı, sonra ham Kubernetes manifest'leri.
+
+### 8a — Docker dağıtımı (tamam)
+
+- [x] Üretim compose'u (`docker-compose.prod.yml`) — named volume, özel ağ,
+      sağlık kontrolleri, log rotasyonu, bellek sınırları, `no-new-privileges`
+- [x] Elasticsearch/Kibana ve test SSH sunucusu üretimden çıkarıldı; ES var
+      olan bir kümeye uygulama içinden bağlanıyor
+- [x] Gizli anahtarlar zorunlu, varsayılansız (`${DEĞİŞKEN:?…}`)
+- [x] `.env.prod.example` ve kurulum/işletim dokümanı (`docs/DEPLOYMENT.md`)
+
+### 8b — Kubernetes manifest'leri
+
+- [ ] Namespace, Deployment (api, web), Service, Ingress
+- [ ] Secret (kök anahtar, JWT, DB parolası), ConfigMap
+- [ ] Postgres: StatefulSet + PVC ya da dış yönetilen veritabanına yönlendirme
+      kararı
+- [ ] Migration'lar için Job (deployment öncesi çalışan)
+- [ ] Liveness/readiness probları, kaynak istekleri ve sınırları,
+      PodSecurityContext (non-root, read-only kök dosya sistemi)
+- [ ] Birden çok `api` kopyası: `audit_outbox` zaten `for update skip locked`
+      ile güvenli, ama SSH oturumları süreç belleğinde — oturum yapışkanlığı
+      (session affinity) gerekip gerekmediği sınanmalı
+
+### 8c — Kalan sıkılaştırma
+
+- [ ] TLS — üretimde ters proxy'ye bırakıldı; Kubernetes'te Ingress + cert
+      yönetimi kararı verilecek
 - [ ] Rate limit ayarlarını gözden geçir
-- [ ] Kurulum ve işletim dokümanı
+- [ ] Otomatik yedek (şu an `pg_dump` komutu dokümanda, zamanlayıcı yok)
 
 ## Açık kaynak yayına hazırlık
 

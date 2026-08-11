@@ -14,7 +14,8 @@ Son güncelleme: 2026-08-11
 | 5 | Sunucu metrik paneli | tamam |
 | 6 | Elasticsearch denetim akışı | tamam |
 | 7 | Yapılandırma dışa/içe aktarma | tamam |
-| 8 | Helm chart, güvenlik sıkılaştırma, dokümantasyon | **sırada** |
+| 8a | Tek makine Docker dağıtımı | tamam |
+| 8b | Kubernetes manifest'leri (Helm yok) | **sırada** |
 | 9 | Keycloak/OIDC | plan dışı, sonraki aşama |
 
 ## Çalışan özellikler
@@ -208,8 +209,14 @@ yazılması, UTF-8'in çerçeve sınırında bölünse bile bozulmaması.
   Bu yüzden gönderilmiş satırlar 30 gün saklanıyor
   (`AUDIT_RETAIN_SHIPPED_MS`), hemen silinmiyor. Daha uzun arşiv
   Elasticsearch'ün işi.
-- **Helm chart yok.** `deploy/helm` dizini henüz oluşturulmadı; Kubernetes
-  dağıtımı Faz 8'de.
+- **Kubernetes manifest'leri yok.** Tek makine Docker dağıtımı hazır
+  (`docker-compose.prod.yml`, bkz. `docs/DEPLOYMENT.md`); Kubernetes aşaması
+  Faz 8b. Helm kullanılmayacak (gerekçe `DECISIONS.md`).
+- **TLS uygulamada sonlandırılmıyor.** Sertifika yönetimi ters proxy'nin işi;
+  sshby düz HTTP dinler ve dış adresi `PUBLIC_ORIGIN` ile öğrenir. Pano API'si
+  (sağ tık → Yapıştır) bu yüzden yalnızca proxy HTTPS sonlandırdığında çalışır.
+- **Otomatik yedek yok.** `pg_dump` komutu dokümanda, zamanlayıcıya bağlamak
+  kuran kişiye bırakıldı.
 - **Yapılandırma paketi TOFU kayıtlarını taşımaz.** Güvenilen host anahtarını
   başka bir kuruluma taşımak, orada ilk bağlantı doğrulamasını kullanıcı
   görmeden atlatmak olurdu. İçe aktarılan sunucularda ilk bağlantıda parmak
@@ -235,7 +242,24 @@ yazılması, UTF-8'in çerçeve sınırında bölünse bile bozulmaması.
 
 ## Ortam
 
+**Geliştirme** (`deploy/compose/docker-compose.yml`):
+
 - Uygulama: http://localhost:8088
 - Test SSH sunucusu: `test-ssh` konteyneri, port 2222, `sshby`/`sshby`
 - Postgres, Elasticsearch, Kibana compose içinde ayakta
 - Kurumsal ağ: TLS kesmesi var (`NODE_EXTRA_CA_CERTS`), `lscr.io` engelli
+
+**Üretim** (`deploy/compose/docker-compose.prod.yml`, bkz.
+`docs/DEPLOYMENT.md`):
+
+- Yalnızca postgres + migrate + api + web. Elasticsearch ve Kibana yok; denetim
+  var olan bir ES kümesine uygulama içinden bağlanıyor (`Yönetim → Denetim
+  akışı`), ES olmadan da tam çalışır.
+- Gizli anahtarlar zorunlu ve varsayılansız; verilmezse yığın hata ile durur.
+- Named volume (`sshby-postgres-data`), özel bridge ağı, sağlık kontrolleri,
+  log rotasyonu (10 MB × 5), bellek sınırları, `no-new-privileges`.
+- Web varsayılan olarak yalnızca `127.0.0.1`'e bağlanır; dışarı açmak bilinçli
+  bir adım ve TLS sonlandıran ters proxy gerektirir.
+- Doğrulandı: sıfırdan kurulum (4 migration), ilk kullanıcının admin olması,
+  kasa şifrelemesi (yanıtta ve veritabanında düz metin yok), yeniden başlatma
+  sonrası veri kalıcılığı, migration'ların tekrar çalıştırılabilirliği.
