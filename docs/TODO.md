@@ -100,6 +100,13 @@ isteğe bağlı hale gelmesi gerekiyor.
 - [ ] **Gerçek kişisel veriyi depodan çıkar.** `AGENTS.md` içinde gerçek bir
       e-posta adresi ve test parolaları var; açık depoda yer almamalı.
       Yer tutucularla değiştirilmeli.
+- [ ] **Kurumsal Harbor adresi depoda.** `deploy/k8s/kustomization.yaml` ve
+      `deploy/k8s/README.md` gerçek kayıt defteri adresini
+      (`prod-harbor.hedefyatirimbankasi.com.tr`) taşıyor — kurum adını ve iç
+      altyapı bilgisini açık ediyor. İki seçenek:
+      - Yayın öncesi yer tutucuya çevir (`harbor.ornek.local`)
+      - Kustomize overlay'ine taşı: `base/` yer tutucu kalır, kuruma özel
+        `overlays/uretim/` gitignore edilir. Daha temiz ama iki dizin demek.
 - [ ] **Son admin korumasi kontrol edilmedi.** Gerçek hesap
       (`erolbeyaz@gmail.com`) artık admin — bu madde çözüldü. Açık kalan tek
       soru: hiç admin kalmadığında ne oluyor? Son admin kendini pasifleştirip

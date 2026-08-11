@@ -45,17 +45,17 @@ labels:
 # (örneğin `sshby`) yolu ona göre yazın.
 images:
   - name: sshby-api
-    newName: harbor.sirket.local/library/sshby-api
+    newName: prod-harbor.hedefyatirimbankasi.com.tr/library/sshby-api
     newTag: '0.1.0'
   - name: sshby-web
-    newName: harbor.sirket.local/library/sshby-web
+    newName: prod-harbor.hedefyatirimbankasi.com.tr/library/sshby-web
     newTag: '0.1.0'
 
   # Postgres ve initContainer'ların kullandığı temel imaj. Kümenin Docker
-  # Hub'a erişimi yoksa bunu da Harbor'a kopyalayıp burada gösterin:
+  # Hub'a erişimi yoksa bunu da Harbor'a kopyalayıp aşağıdaki girdiyi açın:
   #   docker pull postgres:16-alpine
-  #   docker tag  postgres:16-alpine harbor.sirket.local/library/postgres:16-alpine
-  #   docker push harbor.sirket.local/library/postgres:16-alpine
+  #   docker tag  postgres:16-alpine prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:16-alpine
+  #   docker push prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:16-alpine
   # - name: postgres
-  #   newName: harbor.sirket.local/library/postgres
+  #   newName: prod-harbor.hedefyatirimbankasi.com.tr/library/postgres
   #   newTag: '16-alpine'

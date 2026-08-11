@@ -34,21 +34,27 @@ docker build -f deploy/docker/Dockerfile.web -t sshby-web:0.1.0 .
 Harbor'a etiketleyip gönderin (`library` Harbor'ın varsayılan projesi):
 
 ```bash
-docker login harbor.sirket.local
+docker login prod-harbor.hedefyatirimbankasi.com.tr
 ```
 
 ```bash
-docker tag sshby-api:0.1.0 harbor.sirket.local/library/sshby-api:0.1.0 && docker push harbor.sirket.local/library/sshby-api:0.1.0
+docker tag sshby-api:0.1.0 prod-harbor.hedefyatirimbankasi.com.tr/library/sshby-api:0.1.0 && docker push prod-harbor.hedefyatirimbankasi.com.tr/library/sshby-api:0.1.0
 ```
 
 ```bash
-docker tag sshby-web:0.1.0 harbor.sirket.local/library/sshby-web:0.1.0 && docker push harbor.sirket.local/library/sshby-web:0.1.0
+docker tag sshby-web:0.1.0 prod-harbor.hedefyatirimbankasi.com.tr/library/sshby-web:0.1.0 && docker push prod-harbor.hedefyatirimbankasi.com.tr/library/sshby-web:0.1.0
 ```
 
-Sonra **yalnızca `kustomization.yaml`** içindeki `newName`/`newTag` değerlerini
-kendi adresinizle değiştirin. Manifest dosyalarındaki `image:` satırlarına
-dokunmayın — kayıt defteri adresi tek yerde dursun diye kustomize'ın `images:`
-bölümü kullanılıyor.
+`kustomization.yaml` bu adrese göre **hazır ayarlı**. Sürüm yükseltirken
+yalnızca oradaki `newTag` değerini değiştirin; manifest dosyalarındaki `image:`
+satırlarına dokunmayın — kayıt defteri adresi tek yerde dursun diye
+kustomize'ın `images:` bölümü kullanılıyor.
+
+Harbor'daki etiketleri listelemek için:
+
+```bash
+curl -su KULLANICI https://prod-harbor.hedefyatirimbankasi.com.tr/api/v2.0/projects/library/repositories/sshby-api/artifacts?page_size=20 | grep -o '"name":"[^"]*"'
+```
 
 `latest` yerine sürüm etiketi kullanın: `latest` ile hangi sürümün çalıştığını
 sonradan anlamak mümkün olmuyor ve `imagePullPolicy` davranışı sürprizli.
@@ -57,7 +63,7 @@ sonradan anlamak mümkün olmuyor ve `imagePullPolicy` davranışı sürprizli.
 yapabilmeli:
 
 ```bash
-kubectl create secret docker-registry harbor-cred -n sshby --docker-server=harbor.sirket.local --docker-username=KULLANICI --docker-password=PAROLA
+kubectl create secret docker-registry harbor-cred -n sshby --docker-server=prod-harbor.hedefyatirimbankasi.com.tr --docker-username=KULLANICI --docker-password=PAROLA
 ```
 
 ```bash
@@ -67,8 +73,22 @@ kubectl patch serviceaccount default -n sshby -p '{"imagePullSecrets":[{"name":"
 Bu iki komut namespace oluşturulduktan sonra çalıştırılmalı ve manifest'lere
 dokunmaz.
 
-Kümenin Docker Hub'a erişimi yoksa `postgres:16-alpine` imajını da Harbor'a
-kopyalayın ve `kustomization.yaml`'daki yorumlu `postgres` girdisini açın.
+### Postgres imajı
+
+`postgres:16-alpine` hâlâ Docker Hub'dan çekiliyor ve **üç yerde** kullanılıyor:
+veritabanının kendisi, migrate Job'unun `wait-for-postgres` initContainer'ı ve
+api'nin `wait-for-schema` initContainer'ı.
+
+Kümenizin Docker Hub'a doğrudan erişimi yoksa (Harbor kullanan kurumlarda
+genellikle yoktur) pod'lar `ImagePullBackOff` ile takılır. Çözüm — imajı bir
+kez aynalayın:
+
+```bash
+docker pull postgres:16-alpine && docker tag postgres:16-alpine prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:16-alpine && docker push prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:16-alpine
+```
+
+Sonra `kustomization.yaml`'daki yorumlu `postgres` girdisini açın — üç yer
+birden Harbor'a döner.
 
 Yerel kümede (kind, minikube) kayıt defteri olmadan da çalışabilirsiniz:
 
