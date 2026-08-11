@@ -3,10 +3,16 @@ import clsx from 'clsx';
 import { useT } from '@/lib/i18n';
 
 /**
- * Kenar çubuğunun genişliğini ayarlayan sürükleme çizgisi.
+ * Panelin genişliğini ayarlayan sürükleme çizgisi.
  *
- * Uzun sunucu adları dar bir çubukta okunmuyordu. Genişlik `localStorage`da
- * saklanıyor: kullanıcı bir kez ayarlayıp unutabilmeli.
+ * Genişlik doğrudan `event.clientX` değildi: panelin solunda bölüm menüsü
+ * duruyor ve panel ekranın solundan başlamıyor. `clientX`i genişlik saymak
+ * menü genişliği kadar (168 px) sıçramaya yol açıyordu — kullanıcı çubuğa
+ * dokunur dokunmaz panel sağa fırlıyordu.
+ *
+ * Bunun yerine sürükleme başlarken panelin **sol kenarı** bir kez ölçülüp
+ * sabitleniyor; genişlik o kenara olan mesafe. Çubuk nerede durursa dursun
+ * doğru çalışır.
  */
 export function SidebarResizer({
   width,
@@ -21,6 +27,8 @@ export function SidebarResizer({
 }) {
   const t = useT();
   const dragging = useRef(false);
+  /** Panelin sol kenarının ekrandaki x konumu; sürükleme boyunca sabit. */
+  const originRef = useRef(0);
 
   return (
     <div
@@ -38,14 +46,16 @@ export function SidebarResizer({
       onPointerDown={(event) => {
         event.preventDefault();
         dragging.current = true;
+        // Çubuğun solundaki kenar = çubuğun sol kenarı eksi panelin genişliği.
+        originRef.current = event.currentTarget.getBoundingClientRect().left - width;
         // Fare yakalama: imleç terminalin üzerine geçse bile olaylar buraya gelir.
         event.currentTarget.setPointerCapture(event.pointerId);
         document.body.style.cursor = 'col-resize';
       }}
       onPointerMove={(event) => {
         if (!dragging.current) return;
-        // Çubuk soldan başladığı için genişlik doğrudan imlecin x konumu.
-        onChange(Math.min(max, Math.max(min, event.clientX)));
+        const next = event.clientX - originRef.current;
+        onChange(Math.min(max, Math.max(min, next)));
       }}
       onPointerUp={(event) => {
         dragging.current = false;
@@ -59,7 +69,7 @@ export function SidebarResizer({
         else return;
         event.preventDefault();
       }}
-      onDoubleClick={() => onChange(250)}
+      onDoubleClick={() => onChange(300)}
       title={t('sidebar.resizeTitle')}
     />
   );

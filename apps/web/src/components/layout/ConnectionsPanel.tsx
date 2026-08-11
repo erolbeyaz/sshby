@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FolderIcon, SearchIcon, TerminalIcon, XIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { useT, type TranslateFn, type TranslationKey } from '@/lib/i18n';
@@ -51,6 +52,7 @@ interface Connection {
  */
 export function ConnectionsPanel() {
   const t = useT();
+  const navigate = useNavigate();
   const tabs = useTerminalStore((s) => s.tabs);
   const activeTabId = useTerminalStore((s) => s.activeTabId);
   const setActive = useTerminalStore((s) => s.setActive);
@@ -167,6 +169,13 @@ export function ConnectionsPanel() {
                   if (!connection.tabId) return;
                   if (connection.kind === 'SSH') setActive(connection.tabId);
                   else setActiveFileTab(connection.tabId);
+                  /**
+                   * Çalışma alanına da geç: sekmeyi etkinleştirmek tek başına
+                   * yetmiyordu. Kullanıcı gösterge panelindeyken bir bağlantıya
+                   * tıklayınca hiçbir şey olmuyormuş gibi görünüyor, oturumu
+                   * görmek için ayrıca "Terminal"e tıklaması gerekiyordu.
+                   */
+                  navigate('/');
                 }}
               >
                 <span className="flex items-center gap-1.5">

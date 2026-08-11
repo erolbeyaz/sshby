@@ -167,7 +167,12 @@ export function HomePage() {
                   <HostCard
                     key={host.id}
                     host={host}
-                    onConnect={() => openTab(host.id, host.name)}
+                    onConnect={() => {
+                      openTab(host.id, host.name);
+                      // Bu ekran `/dashboard`ta da açılıyor; sekmeyi açmak tek
+                      // başına yetmez, çalışma alanına geçmek gerekiyor.
+                      navigate('/');
+                    }}
                     onOpen={() => navigate(`/server/${host.id}`)}
                   />
                 ))}
@@ -224,7 +229,10 @@ export function HomePage() {
                     key={host.id}
                     host={host}
                     onOpen={() => navigate(`/server/${host.id}`)}
-                    onConnect={() => openTab(host.id, host.name)}
+                    onConnect={() => {
+                      openTab(host.id, host.name);
+                      navigate('/');
+                    }}
                   />
                 ))}
               </div>

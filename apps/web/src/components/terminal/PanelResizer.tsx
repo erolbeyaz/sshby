@@ -27,6 +27,12 @@ export function PanelResizer({
 }) {
   const t = useT();
   const dragging = useRef(false);
+  /**
+   * Panelin sağ kenarının ekrandaki x konumu; sürükleme boyunca sabit.
+   * `window.innerWidth` varsayımı kırılgandı: panel pencerenin sağ kenarına
+   * dayanmayabilir (yanında başka panel açık olabilir).
+   */
+  const originRef = useRef(0);
 
   /** Terminal tarafı da kullanılabilir kalmalı; panel ekranı yutamaz. */
   const maxWidth = () => Math.max(min, window.innerWidth - 420);
@@ -47,13 +53,15 @@ export function PanelResizer({
       onPointerDown={(event) => {
         event.preventDefault();
         dragging.current = true;
+        // Panelin sağ kenarı = çubuğun sağ kenarı artı panelin genişliği.
+        originRef.current = event.currentTarget.getBoundingClientRect().right + width;
         // Fare yakalama: imleç terminalin üzerine geçse bile olaylar buraya gelir.
         event.currentTarget.setPointerCapture(event.pointerId);
         document.body.style.cursor = 'col-resize';
       }}
       onPointerMove={(event) => {
         if (!dragging.current) return;
-        const next = window.innerWidth - event.clientX;
+        const next = originRef.current - event.clientX;
         onChange(Math.min(maxWidth(), Math.max(min, next)));
       }}
       onPointerUp={(event) => {

@@ -388,3 +388,7 @@ alınmış her yapılandırma paketini okunamaz kılardı.
 | base64 yüklemede dosya bozuluyordu | Parçalar tek tek kodlanınca her parçanın sonuna `=` dolgusu geliyor ve `base64 -d` orada duruyordu |
 | Terminal kapanınca dosya paneli boşalıyordu | Panel terminal çalışma alanının içindeydi; terminal sekmesi yokken hiç çizilmiyordu |
 | Hızlı bağlantı sonrası `sortIndex` kayıyordu | Geçici kayıtlar ağaçta görünmedikleri hâlde sıra sayacını ilerletiyordu |
+| Klasör "Vazgeç"e rağmen oluşuyordu | Seçici tıklanınca hemen POST atıyordu; artık niyeti taşıyor, kaydeden bileşen oluşturuyor |
+| Panele dokununca genişlik sıçrıyordu | Genişlik `clientX` sanılıyordu ama panelin solunda 168 px menü var; sürükleme başında panelin kenarı ölçülüp sabitleniyor |
+| Bağlantıya tıklamak hiçbir şey yapmıyor görünüyordu | Sekme etkinleşiyordu ama `/dashboard`ta kalınıyordu; artık çalışma alanına da geçiliyor |
+| Sudo istemi "Vazgeç"ten sonra geri geliyordu | İstem kapanınca listeleme hatası duruyor, otomatik açma efekti yeniden tetikleniyordu; reddedilen dizin hatırlanıyor |
