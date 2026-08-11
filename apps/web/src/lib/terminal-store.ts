@@ -71,6 +71,14 @@ interface TerminalState {
    * sol menü seçimi tek kaynak (`workspace-store` → `nav`). İki ayrı bayrak
    * varken menüdeki vurgu ile panelin gerçek durumu ayrışabiliyordu.
    */
+  /**
+   * Yan panellerin piksel genişliği. Sabit yüzdeyle açılıyorlardı; dosya
+   * adları uzunken panel dar, terminalde uzun çıktı okurken geniş kalıyordu
+   * ve kullanıcının yapabileceği bir şey yoktu. Panel türü başına ayrı
+   * tutuluyor çünkü üçü aynı anda açık olabiliyor.
+   */
+  panelWidths: { file: number; metric: number; history: number };
+  setPanelWidth: (kind: 'file' | 'metric' | 'history', width: number) => void;
   openTab: (hostId: string, title: string) => string;
   closeTab: (id: string) => void;
   setActive: (id: string) => void;
@@ -83,12 +91,42 @@ interface TerminalState {
 /** Aynı anda açılabilecek sekme sayısı — sunucudaki oturum sınırıyla uyumlu. */
 const MAX_TABS = 12;
 
+const PANEL_WIDTH_KEY = 'sshby.panelWidths';
+const DEFAULT_PANEL_WIDTHS = { file: 560, metric: 420, history: 380 };
+
+function loadPanelWidths(): { file: number; metric: number; history: number } {
+  try {
+    const raw = localStorage.getItem(PANEL_WIDTH_KEY);
+    if (!raw) return DEFAULT_PANEL_WIDTHS;
+    const parsed = JSON.parse(raw) as Partial<typeof DEFAULT_PANEL_WIDTHS>;
+    return {
+      file: Number(parsed.file) || DEFAULT_PANEL_WIDTHS.file,
+      metric: Number(parsed.metric) || DEFAULT_PANEL_WIDTHS.metric,
+      history: Number(parsed.history) || DEFAULT_PANEL_WIDTHS.history,
+    };
+  } catch {
+    return DEFAULT_PANEL_WIDTHS;
+  }
+}
+
 export const useTerminalStore = create<TerminalState>((set, get) => ({
   tabs: [],
   activeTabId: null,
   layout: 'tabs',
   gridColumns: [],
   gridRows: [],
+
+  panelWidths: loadPanelWidths(),
+  setPanelWidth: (kind, width) =>
+    set((state) => {
+      const panelWidths = { ...state.panelWidths, [kind]: width };
+      try {
+        localStorage.setItem(PANEL_WIDTH_KEY, JSON.stringify(panelWidths));
+      } catch {
+        // Kaydedilemezse genişlik yalnızca bu oturumda geçerli olur.
+      }
+      return { panelWidths };
+    }),
   /** Dosya paneli açıksa hangi sunucuya bakıyor — bağlantı listesi bunu gösteriyor. */
   fileTabs: [],
   activeFileTabId: null,

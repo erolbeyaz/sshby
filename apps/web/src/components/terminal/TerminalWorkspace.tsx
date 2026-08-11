@@ -25,13 +25,14 @@ import {
   TerminalIcon,
   XIcon,
 } from 'lucide-react';
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { HistoryPanel } from '@/components/history/HistoryPanel';
 import { MetricsPanel } from '@/components/metrics/MetricsPanel';
 import { FileManager } from '@/components/sftp/FileManager';
 import { useT, type TranslationKey } from '@/lib/i18n';
 import { useTerminalStore, type SessionState, type TerminalTab } from '@/lib/terminal-store';
 import { GridSplitter } from './GridSplitter';
+import { PanelResizer } from './PanelResizer';
 import { TerminalPane } from './TerminalPane';
 
 /** Durum noktası rengi — kenar çubuğundaki sunucu noktalarıyla aynı dil. */
@@ -130,6 +131,33 @@ export function TerminalWorkspace({
   const closeHistoryTab = useTerminalStore((s) => s.closeHistoryTab);
   const setActiveHistoryTab = useTerminalStore((s) => s.setActiveHistoryTab);
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0] ?? null;
+  const panelWidths = useTerminalStore((s) => s.panelWidths);
+  const setPanelWidth = useTerminalStore((s) => s.setPanelWidth);
+
+  /**
+   * Bir panel tek başınaysa alanı doldurur (sürüklenecek bir sınır yok);
+   * yanında başka bir şey varsa sabit genişlikte durur ve sınırı sürüklenebilir.
+   */
+  const onlyHistory = tabs.length === 0 && fileTabs.length === 0 && metricTabs.length === 0;
+  const onlyMetrics = tabs.length === 0 && fileTabs.length === 0;
+  const onlyFiles = tabs.length === 0;
+
+  /**
+   * Etkin terminal değişince, o sunucunun dosya paneli **açıksa** öne gelir.
+   *
+   * Panel kendiliğinden açılmaz: kullanıcı dosya paneli istemediyse sekme
+   * değiştirmek onu açmamalı. Ama açıksa, terminalde baktığı sunucudan başka
+   * bir sunucunun dosyalarını göstermesi kafa karıştırıcıydı.
+   */
+  const setActiveFileTabRef = useRef(setActiveFileTab);
+  setActiveFileTabRef.current = setActiveFileTab;
+  useEffect(() => {
+    if (!activeTabId) return;
+    const host = tabs.find((tab) => tab.id === activeTabId)?.hostId;
+    if (!host) return;
+    const match = fileTabs.find((tab) => tab.hostId === host);
+    if (match && match.id !== activeFileTabId) setActiveFileTabRef.current(match.id);
+  }, [activeTabId, activeFileTabId, fileTabs, tabs]);
 
   /**
    * Izgara boyutu panel sayısından türer: kare köküne yuvarlanmış sütun sayısı,
@@ -311,14 +339,23 @@ export function TerminalWorkspace({
          * kaldırıyor.
          */}
         {historyTabs.length > 0 && (
-          <div
-            className={clsx(
-              'flex min-w-[380px] flex-col border-l border-line',
-              tabs.length === 0 && fileTabs.length === 0 && metricTabs.length === 0
-                ? 'flex-1'
-                : 'w-[34%] shrink-0',
+          <>
+            {/* Tek panel açıksa alanı doldurur; başka panel varsa sınır
+                sürüklenebilir olmalı. */}
+            {!onlyHistory && (
+              <PanelResizer
+                width={panelWidths.history}
+                onChange={(w) => setPanelWidth('history', w)}
+                onReset={() => setPanelWidth('history', 380)}
+              />
             )}
-          >
+            <div
+              className={clsx(
+                'flex min-w-[320px] flex-col border-l border-line',
+                onlyHistory && 'flex-1',
+              )}
+              style={onlyHistory ? undefined : { width: panelWidths.history, flexShrink: 0 }}
+            >
             <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-surface px-2 py-1">
               {historyTabs.map((tab) => (
                 <div
@@ -375,16 +412,26 @@ export function TerminalWorkspace({
                 </div>
               ))}
             </div>
-          </div>
+            </div>
+          </>
         )}
 
         {metricTabs.length > 0 && (
-          <div
-            className={clsx(
-              'flex min-w-[520px] flex-col border-l border-line',
-              tabs.length === 0 && fileTabs.length === 0 ? 'flex-1' : 'w-[52%] shrink-0',
+          <>
+            {!onlyMetrics && (
+              <PanelResizer
+                width={panelWidths.metric}
+                onChange={(w) => setPanelWidth('metric', w)}
+                onReset={() => setPanelWidth('metric', 420)}
+              />
             )}
-          >
+            <div
+              className={clsx(
+                'flex min-w-[320px] flex-col border-l border-line',
+                onlyMetrics && 'flex-1',
+              )}
+              style={onlyMetrics ? undefined : { width: panelWidths.metric, flexShrink: 0 }}
+            >
             <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-surface px-2 py-1">
               {metricTabs.map((tab) => (
                 <div
@@ -441,18 +488,28 @@ export function TerminalWorkspace({
                 </div>
               ))}
             </div>
-          </div>
+            </div>
+          </>
         )}
 
         {fileTabs.length > 0 && (
-          // Ağaç + tablo düzeni için geniş alan gerekiyor; dar panelde
-          // sütunlar okunmaz hâle geliyordu.
-          <div
-            className={clsx(
-              'flex min-w-[560px] flex-col border-l border-line',
-              tabs.length === 0 ? 'flex-1' : 'w-[62%] shrink-0',
+          <>
+            {!onlyFiles && (
+              <PanelResizer
+                width={panelWidths.file}
+                onChange={(w) => setPanelWidth('file', w)}
+                onReset={() => setPanelWidth('file', 560)}
+              />
             )}
-          >
+            {/* Ağaç + tablo düzeni için geniş alan gerekiyor; dar panelde
+                sütunlar okunmaz hâle geliyordu — bu yüzden alt sınır yüksek. */}
+            <div
+              className={clsx(
+                'flex min-w-[420px] flex-col border-l border-line',
+                onlyFiles && 'flex-1',
+              )}
+              style={onlyFiles ? undefined : { width: panelWidths.file, flexShrink: 0 }}
+            >
             {/* Birden çok sunucunun dosyalarına aynı anda bakılabilsin diye
                 dosya panellerinin kendi sekme şeridi var. */}
             <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-surface px-2 py-1">
@@ -516,7 +573,8 @@ export function TerminalWorkspace({
                 </div>
               ))}
             </div>
-          </div>
+            </div>
+          </>
         )}
       </div>
       </div>

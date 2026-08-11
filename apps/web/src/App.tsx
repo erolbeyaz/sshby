@@ -37,7 +37,14 @@ export function App() {
         auditIndex={bootstrap?.auditIndexPattern ?? null}
       >
         <Routes>
+          {/*
+            `/` terminal çalışma alanıdır: açık oturum varsa onu gösterir,
+            yoksa gösterge paneline düşer. `/dashboard` ise her koşulda
+            gösterge panelini açar — açık terminali olan kullanıcı da
+            özetlere bakabilmeli.
+          */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<HomePage />} />
           <Route path="/server/:hostId" element={<HostDetailPage />} />
           <Route path="/vault" element={<CredentialsPage />} />
           <Route

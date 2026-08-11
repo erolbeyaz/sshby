@@ -9,10 +9,10 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { hostInputSchema, type Folder, type Host, type HostInput } from '@sshby/shared';
-import { FolderPicker } from '@/components/ui/FolderPicker';
+import { FolderPicker, type FolderSelection } from '@/components/ui/FolderPicker';
 import { Modal } from '@/components/ui/Modal';
 import { useApiError, useT } from '@/lib/i18n';
-import { useCreateHost, useCredentials, useUpdateHost } from '@/lib/queries';
+import { useCreateFolder, useCreateHost, useCredentials, useUpdateHost } from '@/lib/queries';
 
 /**
  * Sunucu formu — bölümlere ayrılmış düzen.
@@ -39,6 +39,7 @@ export function HostDialog({
   const credentials = useCredentials();
   const createHost = useCreateHost();
   const updateHost = useUpdateHost();
+  const createFolder = useCreateFolder();
 
   const [form, setForm] = useState({
     name: host?.name ?? '',
@@ -51,12 +52,15 @@ export function HostDialog({
     notes: host?.notes ?? '',
     tags: host?.tags.join(', ') ?? '',
   });
-  const [folderId, setFolderId] = useState<string | null>(host?.folderId ?? defaultFolderId);
+  const [folder, setFolder] = useState<FolderSelection>({
+    kind: 'existing',
+    id: host?.folderId ?? defaultFolderId,
+  });
   const [pinned, setPinned] = useState(host?.pinned ?? false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const busy = createHost.isPending || updateHost.isPending;
+  const busy = createHost.isPending || updateHost.isPending || createFolder.isPending;
 
   /** Seçili kimlik bilgisi bir kullanıcı adı taşıyorsa alan boş bırakılabilir. */
   const inheritedUsername =
@@ -70,6 +74,30 @@ export function HostDialog({
     event.preventDefault();
     setError(null);
     setFieldErrors({});
+
+    /**
+     * Bekleyen klasör burada açılır — seçicide değil. Böylece "Vazgeç" hiçbir
+     * yan etki bırakmıyor; klasör yalnızca sunucu gerçekten kaydedilirken
+     * oluşuyor.
+     */
+    let folderId: string | null = null;
+    if (folder.kind === 'existing') {
+      folderId = folder.id;
+    } else {
+      try {
+        const created = await createFolder.mutateAsync({
+          name: folder.name,
+          parentId: folder.parentId,
+          color: null,
+        });
+        folderId = created.id;
+        // Klasör açıldı: form yeniden gönderilirse ikinci kez oluşturulmasın.
+        setFolder({ kind: 'existing', id: created.id });
+      } catch (err) {
+        setError(apiError(err, 'common.saveFailed'));
+        return;
+      }
+    }
 
     const candidate = {
       name: form.name,
@@ -227,7 +255,7 @@ export function HostDialog({
         <Section icon={<TagIcon size={12} />} title={t('hostDialog.folderAndAdvanced')}>
           <div className="grid grid-cols-2 gap-4">
             <Field label={t('hostDialog.folder')}>
-              <FolderPicker folders={folders} value={folderId} onChange={setFolderId} />
+              <FolderPicker folders={folders} value={folder} onChange={setFolder} />
             </Field>
             <Field label={t('hostDialog.tags')} hint={t('hostDialog.tagsHint')}>
               <input

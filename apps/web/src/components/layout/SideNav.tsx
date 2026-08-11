@@ -1,40 +1,37 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  ArrowDownUpIcon,
-  DatabaseIcon,
   KeyRoundIcon,
+  LayoutDashboardIcon,
   PlugZapIcon,
   ServerIcon,
-  ShieldIcon,
+  TerminalIcon,
   ZapIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { ConfigTransferDialog } from '@/components/dialogs/ConfigTransferDialog';
-import { useAuthStore } from '@/lib/auth-store';
 import { useT, type TranslationKey } from '@/lib/i18n';
 import { useWorkspaceStore, type NavSection } from '@/lib/workspace-store';
 
 /**
  * Sol dikey menü.
  *
- * Uygulamanın birincil gezinmesi buraya taşındı; üst bar yalnızca kimlik,
- * durum ve dil için kaldı. Gerekçe: bölüm sayısı arttıkça yatay bir çubuk
- * dar ekranlarda taşıyor, dikey liste ise sınırsız büyüyebiliyor ve her
- * öğenin adı görünür kalıyor.
+ * İki tür öğe var: **panel açanlar** (sunucular, kimlik bilgileri, bağlantılar,
+ * hızlı bağlantı) ve **sayfaya götürenler** (gösterge paneli, terminal).
+ * Yönetim işleri (kullanıcılar, denetim, yapılandırma aktarımı) bilinçli olarak
+ * burada değil — hesap menüsünde. Günlük kullanımda girilmeyen bölümler
+ * birincil gezinmede yer kaplamamalı.
  *
- * Seçili öğe vurgulu durur ve içeriği hemen sağdaki panelde açılır — panel
- * ayrı bir sayfa değil, terminal her zaman ayakta kalsın diye.
+ * Seçili öğe vurgulu durur ve panel açan öğelerin içeriği hemen sağdaki
+ * panelde görünür.
  */
 
-interface NavItem {
+interface PanelItem {
   section: Exclude<NavSection, null>;
   icon: LucideIcon;
   labelKey: TranslationKey;
 }
 
-const ITEMS: NavItem[] = [
+const PANEL_ITEMS: PanelItem[] = [
   { section: 'hosts', icon: ServerIcon, labelKey: 'nav.hosts' },
   { section: 'credentials', icon: KeyRoundIcon, labelKey: 'nav.vault' },
   { section: 'connections', icon: PlugZapIcon, labelKey: 'nav.connections' },
@@ -44,56 +41,40 @@ const ITEMS: NavItem[] = [
 export function SideNav() {
   const t = useT();
   const navigate = useNavigate();
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const { pathname } = useLocation();
   const nav = useWorkspaceStore((s) => s.nav);
   const toggleNav = useWorkspaceStore((s) => s.toggleNav);
-  const [configOpen, setConfigOpen] = useState(false);
 
   return (
-    <>
-      <nav
-        className="flex w-[168px] shrink-0 flex-col gap-0.5 border-r border-line bg-surface-2 p-2"
-        aria-label={t('nav.sections')}
-      >
-        {ITEMS.map((item) => (
-          <NavButton
-            key={item.section}
-            icon={item.icon}
-            label={t(item.labelKey)}
-            active={nav === item.section}
-            onClick={() => toggleNav(item.section)}
-          />
-        ))}
+    <nav
+      className="flex w-[168px] shrink-0 flex-col gap-0.5 border-r border-line bg-surface-2 p-2"
+      aria-label={t('nav.sections')}
+    >
+      <NavButton
+        icon={TerminalIcon}
+        label={t('nav.terminal')}
+        active={pathname === '/'}
+        onClick={() => navigate('/')}
+      />
+      <NavButton
+        icon={LayoutDashboardIcon}
+        label={t('nav.dashboard')}
+        active={pathname === '/dashboard'}
+        onClick={() => navigate('/dashboard')}
+      />
 
-        <div className="my-1.5 border-t border-line" />
+      <div className="my-1.5 border-t border-line" />
 
+      {PANEL_ITEMS.map((item) => (
         <NavButton
-          icon={ArrowDownUpIcon}
-          label={t('user.configTransfer')}
-          active={false}
-          onClick={() => setConfigOpen(true)}
+          key={item.section}
+          icon={item.icon}
+          label={t(item.labelKey)}
+          active={nav === item.section}
+          onClick={() => toggleNav(item.section)}
         />
-
-        {isAdmin && (
-          <>
-            <NavButton
-              icon={ShieldIcon}
-              label={t('user.manageUsers')}
-              active={false}
-              onClick={() => navigate('/admin/users')}
-            />
-            <NavButton
-              icon={DatabaseIcon}
-              label={t('user.auditStream')}
-              active={false}
-              onClick={() => navigate('/admin/audit')}
-            />
-          </>
-        )}
-      </nav>
-
-      {configOpen && <ConfigTransferDialog onClose={() => setConfigOpen(false)} />}
-    </>
+      ))}
+    </nav>
   );
 }
 

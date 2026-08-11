@@ -320,6 +320,46 @@ yazılan adı doğrudan oluşturuyor — kullanıcı sunucu formunu terk edip kl
 açıp geri dönmek zorunda kalmasın diye. Yeni klasör, o an seçili klasörün
 altına açılır.
 
+**Seçicideki "oluştur" hemen yazmaz, niyeti taşır.** İlk sürümde seçici
+tıklandığı anda POST atıyordu; kullanıcı formu "Vazgeç" ile kapatsa bile
+klasör envanterde kalıyordu. Artık seçici `{ kind: 'new', name }` döndürüyor
+ve klasörü formu kaydeden bileşen açıyor. Kural: **iptal edilen bir form
+hiçbir yan etki bırakmamalı.** Kullanıcı bunu bilsin diye seçicinin altında
+"kaydettiğinizde oluşturulacak" notu var.
+
+**Gösterge paneli `/dashboard` rotasına taşındı.** `/` terminal çalışma
+alanıdır ve açık oturum varsa onu gösterir; açık oturumu olan kullanıcının
+özetlere bakmak için oturumlarını kapatması gerekiyordu. İki ayrı rota, iki
+ayrı niyet.
+
+**Yönetim işleri sol menüde değil, hesap menüsünde.** Kullanıcı yönetimi,
+denetim ayarları ve yapılandırma aktarımı günlük kullanımda girilen yerler
+değil; birincil gezinmede yer kaplamaları, asıl işi (sunucuya bağlanmak)
+aşağı itiyordu.
+
+**Panel genişlik animasyonuyla açılır.** Bir anda belirip kaybolduğunda
+içeriğin nereden geldiği gözle takip edilemiyordu; kayarak açılmak paneli
+menüye görsel olarak bağlıyor. `motion-reduce` altında animasyon kapanır.
+İçerik kapanma animasyonu bitince sökülür — sıfır genişlikli bir panelin
+düğmeleri sekme sırasında kalmamalı.
+
+**Yan panel genişlikleri sürüklenebilir ve panel türü başına saklanır.**
+Dosya/metrik/geçmiş panelleri sabit yüzdeyle açılıyordu: dosya adları uzunken
+panel dar, terminalde uzun çıktı okurken geniş kalıyordu. Üçü aynı anda açık
+olabildiği için genişlik türe göre ayrı tutuluyor. Tek panel açıkken sınır
+yok, alanı doldurur.
+
+**Etkin terminal değişince dosya paneli takip eder — ama kendiliğinden
+açılmaz.** Panel açıksa terminalde bakılan sunucudan başkasının dosyalarını
+göstermesi kafa karıştırıcıydı. Açık değilse sekme değiştirmek onu açmaz:
+kullanıcı dosya paneli istemediyse istemiyordur.
+
+**Reddedilen sudo istemi aynı dizinde tekrarlanmaz.** "Vazgeç" işe
+yaramıyordu: istem kapanınca listeleme hatası duruyor, kendiliğinden açma
+efekti istemi hemen geri getiriyordu ve kullanıcı paneli kapatıp açmadan
+kurtulamıyordu. Reddedilen dizin hatırlanıyor; başka dizine geçilirse
+yeniden sorulabilir, çünkü orada yetki durumu farklı olabilir.
+
 **Not ve sabitleme sunucu kaydına eklendi.** `notes`: bağlantı bilgisi olmayan
 ama bağlanırken bilinmesi gereken şeyler (bakım penceresi, sahibi, hangi
 uygulamayı çalıştırdığı) hiçbir yere yazılamıyordu, kullanıcılar bunu ad

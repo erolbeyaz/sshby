@@ -25,15 +25,27 @@ listesi ve son etkinlikler. Etkinlikler `audit_outbox`'tan okunur; arka plan
 komutları (`source: system`) elenir. Sunuculara açılışta ping ATILMAZ — "bağlı"
 sayısı gerçekten açık olan SSH oturumlarından türer.
 
-**Arayüz düzeni** — solda dikey bölüm menüsü (Ana Bilgisayarlar, Kimlik
-Bilgileri, Bağlantılar, Hızlı Bağlantı + yapılandırma ve yönetim kısayolları).
-Seçili bölüm vurgulu kalır ve içeriği hemen sağdaki panelde açılır; aynı
-öğeye tekrar tıklamak paneli kapatır. Panel genişliği sürüklenebilir ve
-`localStorage`da saklanır. Üst bar yalnızca marka, sunucu sayısı, denetim
-rozeti, dil ve hesap menüsü taşır.
+**Arayüz düzeni** — solda dikey menü: Terminal ve Gösterge Paneli (sayfaya
+götürür), ardından Ana Bilgisayarlar, Kimlik Bilgileri, Bağlantılar, Hızlı
+Bağlantı (panel açar). Seçili bölüm vurgulu kalır ve içeriği hemen sağdaki
+panelde **kayarak** açılır; aynı öğeye tekrar tıklamak paneli kapatır. Panel
+genişliği sürüklenebilir ve `localStorage`da saklanır.
+
+Yönetim işleri (kullanıcı yönetimi, denetim akışı, yapılandırma aktarımı)
+yalnızca sağ üstteki hesap menüsünde. Üst bar bunun dışında marka, sunucu
+sayısı, denetim rozeti ve dil seçicisi taşır.
+
+`/` terminal çalışma alanıdır (açık oturum varsa onu gösterir, yoksa gösterge
+paneline düşer); `/dashboard` her koşulda gösterge panelini açar — açık
+oturumu olan kullanıcı da özetlere bakabilmeli.
 
 Terminal açık değilken ana ekran sunucu kartlarıyla açılır: her kart durum
 noktası, adres, etiketler ve tek tıkla bağlanma düğmesi taşır.
+
+**Yan paneller** (dosyalar, metrikler, geçmiş) terminalin sağında açılır ve
+aralarındaki sınır sürüklenerek boyutlandırılır; genişlik panel türü başına
+saklanır. Etkin terminal sekmesi değiştiğinde, o sunucunun dosya paneli
+**açıksa** öne gelir — açık değilse kendiliğinden açılmaz.
 
 **Kimlik** — e-posta/parola kaydı (argon2id), ilk kullanıcı admin olur, JWT
 access + httpOnly refresh, oturum listeleme/iptal, kullanıcı yönetimi ekranı.
@@ -78,7 +90,8 @@ soru sorulamaz).
 
 **SFTP sudo modu** — yetki gerektiren dizinlerde SFTP alt sistemi yerine kabuk
 komutları kullanılır (`find`, `base64`, `mkdir`…). Yetki hatasında parola istemi
-kendiliğinden açılır. Parola yalnızca süreç belleğinde tutulur, 15 dakika
+kendiliğinden açılır; "Vazgeç" denen dizinde bir daha sorulmaz (başka dizine
+geçilirse yeniden sorulabilir). Parola yalnızca süreç belleğinde tutulur, 15 dakika
 kullanılmazsa silinir; diske, denetime ya da loga yazılmaz. Yollar kabuk için
 tırnaklanır — komutlar root olarak çalıştığı için bu güvenliğin taşıyıcı kolonu.
 

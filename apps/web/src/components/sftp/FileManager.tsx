@@ -102,6 +102,16 @@ export function FileManager({
   const [sudoPrompt, setSudoPrompt] = useState<{ error: string | null; busy: boolean } | null>(
     null,
   );
+  /**
+   * Kullanıcının sudo istemini reddettiği dizin.
+   *
+   * Bu olmadan "Vazgeç" işe yaramıyordu: istem kapanınca listeleme hatası
+   * hâlâ duruyor, kendiliğinden açma efekti yeniden çalışıp istemi hemen geri
+   * getiriyordu. Kullanıcı paneli kapatıp açmadan kurtulamıyordu. Reddedilen
+   * dizini hatırlayınca aynı yolda bir daha sorulmuyor; başka bir dizine
+   * geçildiğinde yeniden sorulabilir, çünkü orada yetki durumu farklı olabilir.
+   */
+  const [sudoDeclinedFor, setSudoDeclinedFor] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['/']));
   const [dialog, setDialog] = useState<Dialog>(null);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +130,7 @@ export function FileManager({
   useEffect(() => {
     setPath(null);
     setSudo(false);
+    setSudoDeclinedFor(null);
     setHistory([null]);
     setHistoryIndex(0);
     setExpanded(new Set(['/']));
@@ -147,12 +158,14 @@ export function FileManager({
    */
   useEffect(() => {
     if (!listing.isError || sudo || sudoPrompt) return;
+    // Bu dizin için zaten "Vazgeç" denmişse ısrar etme.
+    if (sudoDeclinedFor === String(path)) return;
     const err = listing.error;
     const code = err instanceof ApiRequestError ? err.code : null;
     if (code === 'permission_denied' || code === 'not_found') {
       setSudoPrompt({ error: null, busy: false });
     }
-  }, [listing.isError, listing.error, sudo, sudoPrompt]);
+  }, [listing.isError, listing.error, sudo, sudoPrompt, sudoDeclinedFor, path]);
 
   async function confirmSudo(password: string) {
     setSudoPrompt({ error: null, busy: true });
@@ -435,10 +448,14 @@ export function FileManager({
                   <button
                     type="button"
                     className="btn mt-3"
-                    onClick={() => setSudoPrompt({ error: null, busy: false })}
+                    onClick={() => {
+                      // Elle istendiğinde reddedilmişlik kaydı temizlenir.
+                      setSudoDeclinedFor(null);
+                      setSudoPrompt({ error: null, busy: false });
+                    }}
                   >
                     <ShieldIcon size={13} />
-                    Sudo ile dene
+                    {t('files.trySudo')}
                   </button>
                 )}
               </div>
@@ -528,7 +545,7 @@ export function FileManager({
             {sudo && (
               <span className="flex items-center gap-1.5 text-accent">
                 <ShieldIcon size={11} aria-hidden="true" />
-                sudo etkin
+                {t('files.sudoActive')}
               </span>
             )}
           </div>
@@ -541,7 +558,11 @@ export function FileManager({
           error={sudoPrompt.error}
           busy={sudoPrompt.busy}
           onSubmit={(password) => void confirmSudo(password)}
-          onCancel={() => setSudoPrompt(null)}
+          onCancel={() => {
+            setSudoPrompt(null);
+            // Aynı dizinde istemin hemen geri gelmemesi için reddi kaydet.
+            setSudoDeclinedFor(String(path));
+          }}
         />
       )}
 

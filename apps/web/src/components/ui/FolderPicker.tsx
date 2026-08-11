@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronsUpDownIcon, FolderIcon, FolderPlusIcon, SearchIcon } from 'lucide-react';
 import clsx from 'clsx';
 import type { Folder } from '@sshby/shared';
-import { useApiError, useI18n, useT } from '@/lib/i18n';
-import { useCreateFolder } from '@/lib/queries';
+import { useI18n, useT } from '@/lib/i18n';
 
 /**
  * Klasör seçici: arar, yoksa oluşturur.
@@ -13,9 +12,17 @@ import { useCreateFolder } from '@/lib/queries';
  * tam yoluyla ("Üretim › Veritabanı") listeleniyor ve arama bu yol üzerinde
  * yapılıyor.
  *
- * Yazılan ad hiçbir klasörle eşleşmiyorsa "oluştur" satırı çıkıyor: kullanıcı
- * sunucu formunu terk edip klasör oluşturup geri dönmek zorunda kalmasın diye.
+ * **Yeni klasör hemen oluşturulmaz.** Seçici yalnızca niyeti taşır
+ * (`{ kind: 'new', name }`); klasör, formu kaydeden bileşen tarafından kayıt
+ * anında açılır. Önce anında POST atılıyordu ve kullanıcı "Vazgeç" dese bile
+ * klasör envanterde kalıyordu — formu iptal etmek hiçbir yan etki
+ * bırakmamalı.
  */
+
+export type FolderSelection =
+  | { kind: 'existing'; id: string | null }
+  /** Kayıt anında açılacak klasör; `parentId` seçiliyken altına açılır. */
+  | { kind: 'new'; name: string; parentId: string | null };
 
 export interface FolderOption {
   id: string;
@@ -55,18 +62,15 @@ export function FolderPicker({
   excludeSubtreeOf,
 }: {
   folders: Folder[];
-  value: string | null;
-  onChange: (folderId: string | null) => void;
+  value: FolderSelection;
+  onChange: (selection: FolderSelection) => void;
   excludeSubtreeOf?: string | null;
 }) {
   const t = useT();
   const { lang } = useI18n();
-  const apiError = useApiError();
-  const createFolder = useCreateFolder();
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,30 +114,28 @@ export function FolderPicker({
     : options;
 
   const exactExists = options.some(
-    (o) => o.path.toLocaleLowerCase(lang) === needle || o.path.split(' › ').pop()?.toLocaleLowerCase(lang) === needle,
+    (o) =>
+      o.path.toLocaleLowerCase(lang) === needle ||
+      o.path.split(' › ').pop()?.toLocaleLowerCase(lang) === needle,
   );
   const canCreate = needle.length > 0 && !exactExists;
 
-  const selected = options.find((o) => o.id === value) ?? null;
+  const selectedId = value.kind === 'existing' ? value.id : null;
+  const selectedOption = options.find((o) => o.id === selectedId) ?? null;
 
-  async function handleCreate() {
-    setError(null);
-    try {
-      /**
-       * Yeni klasör, o an seçili olan klasörün altına açılır: kullanıcı bir
-       * dalı seçtikten sonra "yeni" derse kastettiği o dalın altıdır.
-       */
-      const created = await createFolder.mutateAsync({
-        name: query.trim(),
-        parentId: value,
-        color: null,
-      });
-      onChange(created.id);
-      setQuery('');
-      setOpen(false);
-    } catch (err) {
-      setError(apiError(err, 'common.saveFailed'));
-    }
+  const label =
+    value.kind === 'new'
+      ? t('folderPicker.pendingNew', { name: value.name })
+      : (selectedOption?.path ?? t('folderPicker.none'));
+
+  function stageNew() {
+    /**
+     * Yeni klasör, o an seçili olan klasörün altına açılacak: kullanıcı bir
+     * dalı seçtikten sonra "yeni" derse kastettiği o dalın altıdır.
+     */
+    onChange({ kind: 'new', name: query.trim(), parentId: selectedId });
+    setQuery('');
+    setOpen(false);
   }
 
   return (
@@ -145,8 +147,13 @@ export function FolderPicker({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={clsx('truncate', !selected && 'text-fg-dim')}>
-          {selected ? selected.path : t('folderPicker.none')}
+        <span
+          className={clsx(
+            'truncate',
+            value.kind === 'new' ? 'text-accent' : !selectedOption && 'text-fg-dim',
+          )}
+        >
+          {label}
         </span>
         <ChevronsUpDownIcon size={13} className="shrink-0 text-fg-dim" aria-hidden="true" />
       </button>
@@ -168,7 +175,7 @@ export function FolderPicker({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && canCreate) {
                   e.preventDefault();
-                  void handleCreate();
+                  stageNew();
                 }
               }}
             />
@@ -178,9 +185,9 @@ export function FolderPicker({
             <li>
               <Option
                 label={t('folderPicker.none')}
-                selected={value === null}
+                selected={value.kind === 'existing' && value.id === null}
                 onClick={() => {
-                  onChange(null);
+                  onChange({ kind: 'existing', id: null });
                   setOpen(false);
                 }}
               />
@@ -189,9 +196,9 @@ export function FolderPicker({
               <li key={option.id}>
                 <Option
                   label={option.path}
-                  selected={value === option.id}
+                  selected={selectedId === option.id}
                   onClick={() => {
-                    onChange(option.id);
+                    onChange({ kind: 'existing', id: option.id });
                     setOpen(false);
                   }}
                 />
@@ -203,8 +210,7 @@ export function FolderPicker({
                 <button
                   type="button"
                   className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12.5px] text-accent transition-colors hover:bg-surface-2"
-                  onClick={() => void handleCreate()}
-                  disabled={createFolder.isPending}
+                  onClick={stageNew}
                 >
                   <FolderPlusIcon size={12} className="shrink-0" aria-hidden="true" />
                   <span className="truncate">
@@ -220,13 +226,14 @@ export function FolderPicker({
               </li>
             )}
           </ul>
-
-          {error && (
-            <p role="alert" className="border-t border-line px-2.5 py-2 text-[12px] text-danger">
-              {error}
-            </p>
-          )}
         </div>
+      )}
+
+      {/* Kullanıcı klasörün henüz açılmadığını bilmeli: "Vazgeç" hiçbir iz bırakmaz. */}
+      {value.kind === 'new' && (
+        <span className="mt-1 block text-[12px] text-accent">
+          {t('folderPicker.pendingHint')}
+        </span>
       )}
     </div>
   );

@@ -32,6 +32,7 @@ export const tr = {
   'nav.auditOff': 'denetim kapalı',
   'nav.language': 'Dil',
   'nav.hosts': 'Ana Bilgisayarlar',
+  'nav.dashboard': 'Gösterge Paneli',
   'nav.sections': 'Bölümler',
   'nav.collapsePanel': 'Paneli daralt',
 
@@ -40,6 +41,8 @@ export const tr = {
   'folderPicker.searchOrCreate': 'Ara veya oluştur (alt klasör için seç)',
   'folderPicker.create': '"{name}" klasörünü oluştur',
   'folderPicker.noMatch': 'Eşleşen klasör yok',
+  'folderPicker.pendingNew': 'yeni: {name}',
+  'folderPicker.pendingHint': 'Bu klasör kaydettiğinizde oluşturulacak.',
 
   // ------------------------------------------------------------- kasa paneli
   'vaultPanel.search': 'Kimlik bilgisi ara…',
@@ -257,6 +260,8 @@ export const tr = {
   'files.delete': 'Sil',
   'files.ok': 'Tamam',
   'files.octalLabel': 'Sekizlik izin (örn. 644)',
+  'files.trySudo': 'Sudo ile dene',
+  'files.sudoActive': 'sudo etkin',
 
   // -------------------------------------------------------------- metrikler
   'metrics.loadFailed': 'Metrikler alınamadı.',

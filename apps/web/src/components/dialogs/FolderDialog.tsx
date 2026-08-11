@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { Folder } from '@sshby/shared';
-import { FolderPicker } from '@/components/ui/FolderPicker';
+import { FolderPicker, type FolderSelection } from '@/components/ui/FolderPicker';
 import { Modal } from '@/components/ui/Modal';
 import { useApiError, useT } from '@/lib/i18n';
 import { useCreateFolder, useUpdateFolder } from '@/lib/queries';
@@ -29,7 +29,7 @@ export function FolderDialog({
 
   const [name, setName] = useState(folder?.name ?? '');
   const [color, setColor] = useState<string | null>(folder?.color ?? null);
-  const [parent, setParent] = useState<string | null>(parentId);
+  const [parent, setParent] = useState<FolderSelection>({ kind: 'existing', id: parentId });
   const [error, setError] = useState<string | null>(null);
 
   const busy = createFolder.isPending || updateFolder.isPending;
@@ -44,15 +44,32 @@ export function FolderDialog({
     }
 
     try {
+      /**
+       * Üst klasör de bekleyen olabilir (seçicide "oluştur" denmiş). Zinciri
+       * kayıt anında açıyoruz; iptal edilen bir form envanterde iz bırakmaz.
+       */
+      let parentIdToUse: string | null = null;
+      if (parent.kind === 'existing') {
+        parentIdToUse = parent.id;
+      } else {
+        const createdParent = await createFolder.mutateAsync({
+          name: parent.name,
+          parentId: parent.parentId,
+          color: null,
+        });
+        parentIdToUse = createdParent.id;
+        setParent({ kind: 'existing', id: createdParent.id });
+      }
+
       if (folder) {
         await updateFolder.mutateAsync({
           id: folder.id,
           name: name.trim(),
           color,
-          parentId: parent,
+          parentId: parentIdToUse,
         });
       } else {
-        await createFolder.mutateAsync({ name: name.trim(), parentId: parent, color });
+        await createFolder.mutateAsync({ name: name.trim(), parentId: parentIdToUse, color });
       }
       onClose();
     } catch (err) {

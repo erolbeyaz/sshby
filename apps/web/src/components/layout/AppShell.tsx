@@ -46,6 +46,9 @@ export function AppShell({
    * kapanmasına ve tüm SSH oturumlarının ölmesine yol açıyordu. Sekmeler arası
    * geçişte uyguladığımız kuralın aynısı burada da geçerli: terminal asla
    * sökülmez, yalnızca gizlenir.
+   *
+   * `/dashboard` bilinçli olarak dışarıda: açık oturumu olan kullanıcı da
+   * özetlere bakabilmeli, bunun için oturumlarını kapatmak zorunda kalmamalı.
    */
   const terminalVisible = pathname === '/' && hasTabs;
 

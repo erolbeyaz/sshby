@@ -34,6 +34,7 @@ export const en: Record<keyof typeof tr, string> = {
   'nav.auditOff': 'audit off',
   'nav.language': 'Language',
   'nav.hosts': 'Hosts',
+  'nav.dashboard': 'Dashboard',
   'nav.sections': 'Sections',
   'nav.collapsePanel': 'Collapse panel',
 
@@ -42,6 +43,8 @@ export const en: Record<keyof typeof tr, string> = {
   'folderPicker.searchOrCreate': 'Search or create (select for subfolder)',
   'folderPicker.create': 'Create folder "{name}"',
   'folderPicker.noMatch': 'No matching folders',
+  'folderPicker.pendingNew': 'new: {name}',
+  'folderPicker.pendingHint': 'This folder will be created when you save.',
 
   // ------------------------------------------------------------- vault panel
   'vaultPanel.search': 'Search credentials…',
@@ -258,6 +261,8 @@ export const en: Record<keyof typeof tr, string> = {
   'files.delete': 'Delete',
   'files.ok': 'OK',
   'files.octalLabel': 'Octal permission (e.g. 644)',
+  'files.trySudo': 'Try with sudo',
+  'files.sudoActive': 'sudo active',
 
   // ----------------------------------------------------------------- metrics
   'metrics.loadFailed': 'Metrics could not be collected.',
