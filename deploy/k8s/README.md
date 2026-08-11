@@ -108,7 +108,14 @@ docker run --rm --entrypoint sh prod-harbor.hedefyatirimbankasi.com.tr/library/p
 > docker tag postgres:latest prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:18 && docker push prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:18
 > ```
 >
-> Sonra `kustomization.yaml`'da `newTag: latest` yerine `newTag: '18'` yazın.
+> Sonra `kustomization.yaml`'da etiketi güncelleyin — **tırnak içinde**:
+> `newTag: '18.4'`.
+
+> **Etiketleri her zaman tırnak içinde yazın.** Tırnaksız `18.4` YAML'da
+> ondalık sayı, `18` tam sayı olarak ayrıştırılır ve kustomize şunu der:
+> `cannot unmarshal number into Go struct field Image.images.newTag of type
+> string`. `latest` ve `0.1.0` string göründükleri için sorun çıkarmaz —
+> tuzak yalnızca tamamen sayısal etiketlerde.
 
 Not: tek makine Docker kurulumu (`docker-compose.prod.yml`) PostgreSQL **16**
 kullanıyor, bu manifest ise 18. İki kurulum arasında veri taşıyacaksanız
@@ -246,6 +253,18 @@ Manifest'ler resmi şemalara karşı denetlenebilir:
 ```bash
 docker run --rm -v "$PWD:/w" -w /w ghcr.io/yannh/kubeconform:latest -strict -summary *.yaml
 ```
+
+## Sorun giderme
+
+| Belirti | Neden / çözüm |
+|---|---|
+| `cannot unmarshal number into Go struct field Image.images.newTag` | Etiket tırnaksız yazılmış (`newTag: 18.4`). Tırnak ekleyin: `'18.4'` |
+| `ImagePullBackOff` | Etiket kayıt defterinde yok ya da küme Harbor'a giriş yapamıyor. `kubectl describe pod` ile tam mesaja bakın; gerekiyorsa `imagePullSecrets` adımını uygulayın |
+| Postgres pod'u `CrashLoopBackOff`, logda izin hatası | `03-postgres.yaml`'daki `runAsUser`/`fsGroup` imajın postgres uid'siyle uyuşmuyor (Debian 999, Alpine 70) |
+| Postgres `database files are incompatible with server` | İmaj bir major sürüm ilerlemiş; eski veri dizini açılamıyor. Önceki sürüme dönün ve veriyi `pg_dump` ile taşıyın |
+| `api` pod'u `Init:0/1`'de bekliyor | `wait-for-schema` şemayı bekliyor — migrate Job'una bakın: `kubectl logs job/sshby-migrate -n sshby` |
+| Giriş yapılıyor ama oturum düşüyor | ConfigMap'teki `PUBLIC_ORIGIN` Ingress host'uyla aynı değil (cookie `secure` bayrağı) |
+| Terminal açılmıyor, sayfa çalışıyor | Ingress WebSocket zaman aşımı annotation'ları uygulanmamış |
 
 ## Bilinen sınırlar
 

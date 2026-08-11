@@ -54,13 +54,16 @@ images:
   # Postgres: veritabanının kendisi ve iki initContainer (`wait-for-postgres`,
   # `wait-for-schema`) bu imajı kullanıyor; tek girdi üçünü birden çeviriyor.
   #
-  # UYARI — `latest` bir veritabanı için riskli. Harbor'daki `latest` bir gün
-  # PostgreSQL 19'a güncellenirse ve pod yeniden başlarsa, sunucu mevcut 18
-  # veri dizinini açamaz ("database files are incompatible with server") ve
-  # veritabanı ayağa kalkmaz. Bunu önlemek için Harbor'a sürümlü bir etiket de
-  # gönderip burada onu kullanmak en güvenlisi:
-  #   docker tag postgres:latest prod-harbor…/library/postgres:18
-  # Ayrıntı: deploy/k8s/README.md → Postgres imajı
+  # Sürümlü etiket kullanılıyor — `latest` bir veritabanı için riskli: kayıt
+  # defterindeki etiket bir major sürüm ilerlerse ve pod yeniden başlarsa,
+  # sunucu mevcut veri dizinini açamaz ("database files are incompatible with
+  # server") ve veritabanı ayağa kalkmaz.
+  #
+  # DİKKAT: etiketi HER ZAMAN tırnak içinde yazın. Tırnaksız `18.4` YAML'da
+  # ondalık sayı, `18` ise tam sayı olarak ayrıştırılıyor ve kustomize şu
+  # hatayı veriyor:
+  #   cannot unmarshal number into Go struct field Image.images.newTag of
+  #   type string
   - name: postgres
     newName: prod-harbor.hedefyatirimbankasi.com.tr/library/postgres
-    newTag: latest
+    newTag: '18.4'
