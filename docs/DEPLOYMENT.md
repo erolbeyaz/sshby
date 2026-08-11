@@ -28,9 +28,21 @@ cp .env.prod.example .env
 ```bash
 openssl rand -base64 32   # SSHBY_MASTER_KEY
 openssl rand -hex 32      # JWT_SECRET
-openssl rand -base64 24   # POSTGRES_PASSWORD
+openssl rand -hex 24      # POSTGRES_PASSWORD  (hex — aşağıdaki nota bakın)
                           # PUBLIC_ORIGIN: tarayıcının gördüğü adres
 ```
+
+> **`POSTGRES_PASSWORD` için `-base64` kullanmayın.** Bu değer bağlantı adresine
+> gömülüyor (`postgres://kullanıcı:PAROLA@postgres:5432/veritabanı`); base64
+> çıktısındaki bir `/` adresi bölüp `migrate` servisini
+> `getaddrinfo EAI_AGAIN` ile düşürür. `-hex` yalnızca `0-9a-f` üretir ve her
+> zaman güvenlidir. Kendi parolanızı yazacaksanız `/ @ : ? # % +`
+> kullanmayın.
+
+Windows'ta dosyayı oluştururken **CRLF satır sonu ve BOM bırakmayın** — bazı
+Compose sürümleri değerin sonuna `\r` ekliyor ve hata mesajı bunu göstermiyor.
+PowerShell'de `Set-Content -Encoding utf8` BOM yazar; Git Bash / WSL'de
+`nano`, `vim` ya da `printf` kullanmak daha güvenli.
 
 > **`SSHBY_MASTER_KEY` kasadaki tüm parolaları ve SSH anahtarlarını koruyan kök
 > anahtardır. Kaybedilirse veritabanı yedeğiniz olsa bile hiçbir gizli veri geri
@@ -163,6 +175,7 @@ dolmaz.
 | Belirti | Bakılacak yer |
 |---|---|
 | Compose "required variable … is missing" ile duruyor | `.env` içindeki zorunlu dört değer |
+| `migrate` `getaddrinfo EAI_AGAIN` ile düşüyor | `POSTGRES_PASSWORD` içinde `/ @ : ? # %` var mı — adresi bölüyor. `openssl rand -hex 24` ile yeniden üretin |
 | Giriş yapılıyor ama oturum hemen düşüyor | `PUBLIC_ORIGIN` gerçek dış adresle aynı mı (cookie `secure`) |
 | Terminal açılmıyor, sayfa çalışıyor | Ters proxy `Upgrade`/`Connection` başlıklarını geçiriyor mu |
 | `api` sağlıksız, `migrate` hata vermiş | `logs migrate` — şema uygulanamamış olabilir |

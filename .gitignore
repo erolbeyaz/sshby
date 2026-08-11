@@ -5,10 +5,13 @@ build/
 coverage/
 *.tsbuildinfo
 
+# Tüm .env türevleri engelli, yalnızca *.example dosyaları depoya girer.
+# Önce yalnızca `.env`, `.env.local` ve `.env.*.local` yazılıydı; `.env.prod`
+# gibi bir ad hiçbirine takılmıyor ve içinde kasa kök anahtarı taşıyordu.
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
+!.env.*.example
 
 # Asla depoya girmemesi gerekenler
 *.pem
