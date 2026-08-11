@@ -51,12 +51,17 @@ spec:
         app.kubernetes.io/component: postgres
     spec:
       securityContext:
-        # postgres:16-alpine imajında postgres kullanıcısı uid/gid 70.
-        runAsUser: 70
-        runAsGroup: 70
+        # DİKKAT: bu değerler kullanılan imaja bağlı.
+        #   Debian tabanlı (postgres:latest, postgres:16) → uid/gid 999
+        #   Alpine tabanlı (postgres:16-alpine)           → uid/gid 70
+        # Yanlış değerde pod veri dizinine yazamaz ve initdb izin hatasıyla
+        # durur. İmajı değiştirirseniz burayı da değiştirin:
+        #   docker run --rm --entrypoint sh IMAJ -c "id postgres"
+        runAsUser: 999
+        runAsGroup: 999
         runAsNonRoot: true
         # Kalıcı diskin sahipliği bu gruba verilir, yoksa initdb yazamaz.
-        fsGroup: 70
+        fsGroup: 999
       containers:
         - name: postgres
           image: postgres:16-alpine

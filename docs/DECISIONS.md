@@ -84,6 +84,21 @@ ve bir sonraki yükseltmede aynı dosya sorunsuz uygulanabiliyor.
 selector'larına da ekliyordu; selector değiştirilemez bir alan olduğu için var
 olan bir kuruluma sonradan etiket eklemek `kubectl apply`i kırıyordu.
 
+**Postgres `runAsUser` imaja bağlı ve elle ayarlanıyor.** Resmi imajın postgres
+kullanıcısı Debian tabanında uid 999, Alpine tabanında uid 70. Kubernetes
+`runAsNonRoot` altında imajın kendi entrypoint'i root'tan düşemediği için uid'yi
+biz vermek zorundayız; yanlış değerde `initdb` veri dizinine yazamıyor ve pod
+hiç açılmıyor. İmaj değiştirilirken bu iki satırın da güncellenmesi gerekiyor —
+`03-postgres.yaml` içinde uyarı olarak duruyor.
+
+**Veritabanı için `latest` etiketi risklidir.** Uygulama imajlarında `latest`
+yalnızca "hangi sürüm çalışıyor" belirsizliği demek; veritabanında **veri
+erişilemezliği** demek. Kayıt defterindeki `latest` bir major sürüm ilerlerse ve
+pod yeniden başlarsa, sunucu mevcut veri dizinini açamıyor (`database files are
+incompatible with server`). Kullanıcının isteği üzerine kurumsal kayıt
+defterindeki `latest` kullanılıyor; sürümlü etikete geçiş yolu
+`deploy/k8s/README.md` içinde yazılı.
+
 **Elle yazılmış SQL migration'lar, drizzle-kit üretimi değil.** Şemanın ne zaman
 ne olacağı gözle görülür, üretimde sürpriz DDL çıkmaz. Şema tipleri yine
 `schema.ts`ten gelir; `schema.ts` ve `migrations/*.sql` **elle birlikte**

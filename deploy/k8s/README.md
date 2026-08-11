@@ -75,20 +75,45 @@ dokunmaz.
 
 ### Postgres imajı
 
-`postgres:16-alpine` hâlâ Docker Hub'dan çekiliyor ve **üç yerde** kullanılıyor:
-veritabanının kendisi, migrate Job'unun `wait-for-postgres` initContainer'ı ve
-api'nin `wait-for-schema` initContainer'ı.
+Postgres **üç yerde** kullanılıyor: veritabanının kendisi, migrate Job'unun
+`wait-for-postgres` initContainer'ı ve api'nin `wait-for-schema`
+initContainer'ı. `kustomization.yaml`'daki tek `postgres` girdisi üçünü birden
+çeviriyor ve şu an Harbor'daki `latest` etiketine bakıyor.
 
-Kümenizin Docker Hub'a doğrudan erişimi yoksa (Harbor kullanan kurumlarda
-genellikle yoktur) pod'lar `ImagePullBackOff` ile takılır. Çözüm — imajı bir
-kez aynalayın:
+**İmaj değiştirirseniz `03-postgres.yaml`'daki uid'yi de değiştirin.** Resmi
+imajın kullanıcı kimliği tabana göre farklı:
+
+| İmaj | Sürüm | Taban | postgres uid/gid |
+|---|---|---|---|
+| `postgres:latest` | 18.x | Debian | **999** |
+| `postgres:16-alpine` | 16.x | Alpine | **70** |
+
+Manifest şu an **999** ile ayarlı (Debian). Yanlış uid'de pod veri dizinine
+yazamaz ve `initdb` izin hatasıyla durur. Kontrol:
 
 ```bash
-docker pull postgres:16-alpine && docker tag postgres:16-alpine prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:16-alpine && docker push prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:16-alpine
+docker run --rm --entrypoint sh prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:latest -c "id postgres"
 ```
 
-Sonra `kustomization.yaml`'daki yorumlu `postgres` girdisini açın — üç yer
-birden Harbor'a döner.
+> **`latest` bir veritabanı için riskli.** Harbor'daki `latest` bir gün
+> PostgreSQL 19'a güncellenir ve pod yeniden başlarsa, sunucu mevcut veri
+> dizinini açamaz — `database files are incompatible with server` — ve
+> veritabanı ayağa kalkmaz. Uygulama imajları için `latest` yalnızca
+> "hangi sürüm çalışıyor" belirsizliği demek; veritabanı için **veri
+> erişilemezliği** demek.
+>
+> Önerilen: Harbor'a sürümlü bir etiket de gönderin ve onu kullanın.
+>
+> ```bash
+> docker tag postgres:latest prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:18 && docker push prod-harbor.hedefyatirimbankasi.com.tr/library/postgres:18
+> ```
+>
+> Sonra `kustomization.yaml`'da `newTag: latest` yerine `newTag: '18'` yazın.
+
+Not: tek makine Docker kurulumu (`docker-compose.prod.yml`) PostgreSQL **16**
+kullanıyor, bu manifest ise 18. İki kurulum arasında veri taşıyacaksanız
+`pg_dump` ile taşıyın — veri dizinini doğrudan kopyalamak major sürümler
+arasında çalışmaz.
 
 Yerel kümede (kind, minikube) kayıt defteri olmadan da çalışabilirsiniz:
 
