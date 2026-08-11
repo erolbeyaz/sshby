@@ -1,7 +1,9 @@
 import { Link, NavLink } from 'react-router-dom';
 import clsx from 'clsx';
-import { ArrowDownUpIcon, KeyRoundIcon, PlugZapIcon, TerminalIcon, ZapIcon } from 'lucide-react';
+import { KeyRoundIcon, PlugZapIcon, TerminalIcon, ZapIcon } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
+import { useT } from '@/lib/i18n';
+import { LanguageSwitch } from './LanguageSwitch';
 
 /**
  * Üst bar. Sağdaki mor rozet kalıcıdır: kullanıcı hiçbir zaman
@@ -26,19 +28,17 @@ export function TopBar({
   isAdmin?: boolean;
   right?: React.ReactNode;
 }) {
+  const t = useT();
+  const auditLabel = auditEnabled ? t('nav.auditOn') : t('nav.auditOff');
+
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface-2 px-3.5">
       <Logo size={22} />
 
       {/* Kasa ve terminal arasında geçiş buradan; komut paletine bağımlı olmamalı. */}
       <nav className="ml-3 flex items-center gap-0.5">
-        <TopNavLink to="/" icon={<TerminalIcon size={13} />} label="Terminal" />
-        <TopNavLink to="/kasa" icon={<KeyRoundIcon size={13} />} label="Kasa" />
-        <TopNavLink
-          to="/yapilandirma"
-          icon={<ArrowDownUpIcon size={13} />}
-          label="Yapılandırma"
-        />
+        <TopNavLink to="/" icon={<TerminalIcon size={13} />} label={t('nav.terminal')} />
+        <TopNavLink to="/vault" icon={<KeyRoundIcon size={13} />} label={t('nav.vault')} />
         <button
           type="button"
           className={clsx(
@@ -49,7 +49,7 @@ export function TopBar({
           aria-pressed={connectionsOpen}
         >
           <PlugZapIcon size={13} />
-          Bağlantılar
+          {t('nav.connections')}
         </button>
         <button
           type="button"
@@ -61,13 +61,13 @@ export function TopBar({
           aria-pressed={quickConnectOpen}
         >
           <ZapIcon size={13} />
-          Hızlı bağlantı
+          {t('nav.quickConnect')}
         </button>
       </nav>
 
       <div className="flex-1" />
 
-      <span className="pill">{hostCount} sunucu</span>
+      <span className="pill">{t('nav.hostCount', { n: hostCount })}</span>
 
       {/*
         Rozet tıklanabilir: admin bir kullanıcı "denetim kapalı" yazısını görüp
@@ -76,15 +76,15 @@ export function TopBar({
       */}
       {isAdmin ? (
         <Link
-          to="/yonetim/denetim"
+          to="/admin/audit"
           className={clsx('pill transition-colors hover:border-fg-dim', auditEnabled && 'pill-trace')}
-          title="Denetim akışı ayarları"
+          title={t('user.auditStream')}
         >
           <span
             className={clsx('h-1.5 w-1.5 rounded-full', auditEnabled ? 'bg-trace' : 'bg-fg-dim')}
             aria-hidden="true"
           />
-          {auditEnabled ? "Elastic'e yazılıyor" : 'denetim kapalı'}
+          {auditLabel}
         </Link>
       ) : (
         <span className={clsx('pill', auditEnabled && 'pill-trace')}>
@@ -92,9 +92,11 @@ export function TopBar({
             className={clsx('h-1.5 w-1.5 rounded-full', auditEnabled ? 'bg-trace' : 'bg-fg-dim')}
             aria-hidden="true"
           />
-          {auditEnabled ? "Elastic'e yazılıyor" : 'denetim kapalı'}
+          {auditLabel}
         </span>
       )}
+
+      <LanguageSwitch />
 
       {right}
     </header>

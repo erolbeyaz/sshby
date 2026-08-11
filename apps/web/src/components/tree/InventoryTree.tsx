@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Folder, Host } from '@sshby/shared';
+import { useI18n, useT, type TranslationKey } from '@/lib/i18n';
 import { hostConnectionState, useTerminalStore } from '@/lib/terminal-store';
 
 /**
@@ -78,6 +79,7 @@ function loadExpanded(): Set<string> {
 }
 
 export function InventoryTree(props: TreeProps) {
+  const { lang, t } = useI18n();
   const { folders, hosts, filter } = props;
   const [expanded, setExpanded] = useState<Set<string>>(loadExpanded);
   const [dragging, setDragging] = useState<{ kind: 'folder' | 'host'; label: string } | null>(null);
@@ -98,7 +100,7 @@ export function InventoryTree(props: TreeProps) {
     });
   }
 
-  const normalizedFilter = filter.trim().toLocaleLowerCase('tr');
+  const normalizedFilter = filter.trim().toLocaleLowerCase(lang);
 
   /**
    * Filtre etkinken eşleşen sunucuların üst klasörleri zorla açılır; aksi hâlde
@@ -135,7 +137,7 @@ export function InventoryTree(props: TreeProps) {
 
     for (const host of hosts) {
       const haystack = `${host.name} ${host.hostname} ${host.effectiveUsername ?? ''} ${host.tags.join(' ')}`;
-      if (!haystack.toLocaleLowerCase('tr').includes(normalizedFilter)) continue;
+      if (!haystack.toLocaleLowerCase(lang).includes(normalizedFilter)) continue;
       visibleHostIds.add(host.id);
       let cursor = host.folderId;
       while (cursor) {
@@ -145,7 +147,7 @@ export function InventoryTree(props: TreeProps) {
     }
 
     return { childFolders, folderHosts, matchedFolderIds, visibleHostIds };
-  }, [folders, hosts, normalizedFilter]);
+  }, [folders, hosts, lang, normalizedFilter]);
 
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current as { kind: 'folder' | 'host'; label: string } | undefined;
@@ -198,9 +200,9 @@ export function InventoryTree(props: TreeProps) {
       <div className="flex-1 overflow-y-auto px-1.5 pb-2">
         {isEmpty ? (
           <p className="px-3 py-8 text-center text-[13px] leading-snug text-fg-dim">
-            Henüz sunucu yok.
+            {t('tree.empty')}
             <br />
-            Sağ üstteki <span className="text-fg">+</span> ile başlayın.
+            {t('tree.emptyHint')}
           </p>
         ) : (
           <>
@@ -246,6 +248,7 @@ export function InventoryTree(props: TreeProps) {
 
 /** Öğeyi klasörden çıkarıp köke almak için üstteki ince şerit. */
 function RootDropZone() {
+  const t = useT();
   const { setNodeRef, isOver } = useDroppable({
     id: '__root__',
     data: { dropKind: 'root', folderId: null, index: Number.MAX_SAFE_INTEGER },
@@ -259,7 +262,7 @@ function RootDropZone() {
         isOver ? 'border-accent/60 text-accent' : 'border-line text-fg-dim/60',
       )}
     >
-      kök seviyeye taşı
+      {t('tree.rootDropZone')}
     </div>
   );
 }
@@ -278,6 +281,7 @@ interface FolderNodeProps extends TreeCallbacks {
 }
 
 function FolderNode(props: FolderNodeProps) {
+  const t = useT();
   const { folder, index, depth, expanded, toggle, childFolders, folderHosts } = props;
   const { matchedFolderIds, visibleHostIds } = props;
 
@@ -313,7 +317,7 @@ function FolderNode(props: FolderNodeProps) {
           type="button"
           className="shrink-0 text-fg-dim transition-transform hover:text-fg"
           onClick={() => toggle(folder.id)}
-          aria-label={isOpen ? 'Klasörü kapat' : 'Klasörü aç'}
+          aria-label={isOpen ? t('tree.collapseFolder') : t('tree.expandFolder')}
           aria-expanded={isOpen}
         >
           <ChevronRightIcon
@@ -377,7 +381,7 @@ function FolderNode(props: FolderNodeProps) {
               className="py-1 text-[11.5px] text-fg-dim/60"
               style={{ paddingLeft: (depth + 1) * 12 + 26 }}
             >
-              boş
+              {t('tree.folderEmpty')}
             </p>
           )}
         </div>
@@ -394,13 +398,16 @@ interface HostNodeProps extends TreeCallbacks {
 }
 
 /** Bağlantı durumu → nokta rengi ve okunabilir etiket. */
+// `satisfies`: değerlerin şeklini doğrular ama anahtar literal tiplerini korur,
+// böylece indeksleme `undefined` üretmiyor.
 const CONNECTION_DOT = {
-  connected: { className: 'bg-accent', label: 'bağlı' },
-  connecting: { className: 'bg-warn animate-pulse', label: 'bağlanıyor' },
-  disconnected: { className: 'bg-danger', label: 'bağlı değil' },
-} as const;
+  connected: { className: 'bg-accent', labelKey: 'tree.dotConnected' },
+  connecting: { className: 'bg-warn animate-pulse', labelKey: 'tree.dotConnecting' },
+  disconnected: { className: 'bg-danger', labelKey: 'tree.dotDisconnected' },
+} as const satisfies Record<string, { className: string; labelKey: TranslationKey }>;
 
 function HostNode({ host, index, depth, selectedHostId, ...callbacks }: HostNodeProps) {
+  const t = useT();
   const draggable = useDraggable({ id: host.id, data: { kind: 'host', label: host.name } });
   const droppable = useDroppable({
     id: `host-${host.id}`,
@@ -435,13 +442,13 @@ function HostNode({ host, index, depth, selectedHostId, ...callbacks }: HostNode
           onClick={() => callbacks.onSelectHost(host)}
           // Dosya yöneticilerindeki alışkanlık: tek tık seçer, çift tık açar.
           onDoubleClick={() => callbacks.onConnectHost(host)}
-          title={`${host.effectiveUsername ?? '?'}@${host.hostname}:${host.port} — ${dot.label}`}
+          title={`${host.effectiveUsername ?? '?'}@${host.hostname}:${host.port} — ${t(dot.labelKey)}`}
         >
           <span
             className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', dot.className)}
             // Renk tek başına bilgi taşımamalı; ekran okuyucu da durumu duysun.
             role="img"
-            aria-label={dot.label}
+            aria-label={t(dot.labelKey)}
           />
           <span
             className={clsx(
@@ -463,47 +470,47 @@ function HostNode({ host, index, depth, selectedHostId, ...callbacks }: HostNode
       <div className="mt-0.5 flex items-center gap-0.5 pl-3.5">
         <HostAction
           icon={<TerminalIcon size={11} />}
-          label={`${host.name} için terminal aç`}
-          hint="Terminal"
+          label={t('tree.openTerminalFor', { name: host.name })}
+          hint={t('tree.hintTerminal')}
           onClick={() => callbacks.onConnectHost(host)}
         />
         {/* Dosyalar terminalden bağımsız açılabilir: SFTP kendi bağlantısını
             kurabiliyor, terminal şartı yok. */}
         <HostAction
           icon={<FolderOpenIcon size={11} />}
-          label={`${host.name} dosyalarını aç`}
-          hint="Dosyalar"
+          label={t('tree.openFilesFor', { name: host.name })}
+          hint={t('tree.hintFiles')}
           onClick={() => callbacks.onOpenFiles(host)}
         />
         <HostAction
           icon={<GaugeIcon size={11} />}
-          label={`${host.name} metriklerini aç`}
-          hint="Metrikler"
+          label={t('tree.openMetricsFor', { name: host.name })}
+          hint={t('tree.hintMetrics')}
           onClick={() => callbacks.onOpenMetrics(host)}
         />
         <HostAction
           icon={<HistoryIcon size={11} />}
-          label={`${host.name} komut geçmişini aç`}
-          hint="Geçmiş"
+          label={t('tree.openHistoryFor', { name: host.name })}
+          hint={t('tree.hintHistory')}
           onClick={() => callbacks.onOpenHistory(host)}
         />
         <span className="mx-0.5 h-3 w-px bg-line" aria-hidden="true" />
         <HostAction
           icon={<PencilIcon size={11} />}
-          label={`${host.name} düzenle`}
-          hint="Düzenle"
+          label={t('tree.editHostAria', { name: host.name })}
+          hint={t('common.edit')}
           onClick={() => callbacks.onEditHost(host)}
         />
         <HostAction
           icon={<CopyIcon size={11} />}
-          label={`${host.name} kopyala`}
-          hint="Kopyala"
+          label={t('tree.cloneHostAria', { name: host.name })}
+          hint={t('tree.hintClone')}
           onClick={() => callbacks.onCloneHost(host)}
         />
         <HostAction
           icon={<Trash2Icon size={11} />}
-          label={`${host.name} sil`}
-          hint="Sil"
+          label={t('tree.deleteHostAria', { name: host.name })}
+          hint={t('common.delete')}
           danger
           onClick={() => callbacks.onDeleteHost(host)}
         />
@@ -549,6 +556,7 @@ function RowActions({
   onDelete: () => void;
   extra?: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
       {extra}
@@ -556,7 +564,7 @@ function RowActions({
         type="button"
         className="rounded p-1 text-fg-dim hover:bg-line hover:text-fg"
         onClick={onEdit}
-        aria-label="Düzenle"
+        aria-label={t('common.edit')}
       >
         <PencilIcon size={12} />
       </button>
@@ -564,7 +572,7 @@ function RowActions({
         type="button"
         className="rounded p-1 text-fg-dim hover:bg-line hover:text-danger"
         onClick={onDelete}
-        aria-label="Sil"
+        aria-label={t('common.delete')}
       >
         <Trash2Icon size={12} />
       </button>

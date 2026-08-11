@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DatabaseIcon, LogOutIcon, ShieldIcon, UserIcon } from 'lucide-react';
+import { ArrowDownUpIcon, DatabaseIcon, LogOutIcon, ShieldIcon, UserIcon } from 'lucide-react';
+import { ConfigTransferDialog } from '@/components/dialogs/ConfigTransferDialog';
 import { useAuthStore } from '@/lib/auth-store';
+import { useT } from '@/lib/i18n';
 
 export function UserMenu() {
+  const t = useT();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [open, setOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,66 +38,89 @@ export function UserMenu() {
     .join('');
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface font-mono text-[11px] font-medium text-fg-dim transition-colors hover:border-fg-dim hover:text-fg"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label="Hesap menüsü"
-      >
-        {initials || <UserIcon size={13} aria-hidden="true" />}
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-9 z-50 w-60 overflow-hidden rounded border border-line bg-surface shadow-xl shadow-black/40"
+    <>
+      <div className="relative" ref={ref}>
+        <button
+          type="button"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface font-mono text-[11px] font-medium text-fg-dim transition-colors hover:border-fg-dim hover:text-fg"
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={t('user.menu')}
         >
-          <div className="border-b border-line px-3.5 py-3">
-            <p className="truncate text-[13px] font-medium">{user.displayName}</p>
-            <p className="truncate font-mono text-[11.5px] text-fg-dim">{user.email}</p>
-            {user.role === 'admin' && (
-              <span className="pill mt-2 border-accent/40 text-accent">yönetici</span>
-            )}
-          </div>
+          {initials || <UserIcon size={13} aria-hidden="true" />}
+        </button>
 
-          <div className="p-1">
-            {user.role === 'admin' && (
-              <Link
-                to="/yonetim/kullanicilar"
+        {open && (
+          <div
+            role="menu"
+            className="absolute right-0 top-9 z-50 w-60 overflow-hidden rounded border border-line bg-surface shadow-xl shadow-black/40"
+          >
+            <div className="border-b border-line px-3.5 py-3">
+              <p className="truncate text-[13px] font-medium">{user.displayName}</p>
+              <p className="truncate font-mono text-[11.5px] text-fg-dim">{user.email}</p>
+              {user.role === 'admin' && (
+                <span className="pill mt-2 border-accent/40 text-accent">{t('common.admin')}</span>
+              )}
+            </div>
+
+            <div className="p-1">
+              {user.role === 'admin' && (
+                <>
+                  <Link
+                    to="/admin/users"
+                    role="menuitem"
+                    className="flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] text-fg-dim transition-colors hover:bg-surface-2 hover:text-fg"
+                    onClick={() => setOpen(false)}
+                  >
+                    <ShieldIcon size={14} aria-hidden="true" />
+                    {t('user.manageUsers')}
+                  </Link>
+                  <Link
+                    to="/admin/audit"
+                    role="menuitem"
+                    className="flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] text-fg-dim transition-colors hover:bg-surface-2 hover:text-fg"
+                    onClick={() => setOpen(false)}
+                  >
+                    <DatabaseIcon size={14} aria-hidden="true" />
+                    {t('user.auditStream')}
+                  </Link>
+                </>
+              )}
+
+              {/*
+                Yapılandırma aktarımı her kullanıcının kendi verisiyle çalışır,
+                yönetici işi değil — bu yüzden rol koşulu yok ve çıkışın hemen
+                üstünde, hesaba ait bir eylem olarak duruyor.
+              */}
+              <button
+                type="button"
                 role="menuitem"
-                className="flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] text-fg-dim transition-colors hover:bg-surface-2 hover:text-fg"
-                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-left text-[13px] text-fg-dim transition-colors hover:bg-surface-2 hover:text-fg"
+                onClick={() => {
+                  setConfigOpen(true);
+                  setOpen(false);
+                }}
               >
-                <ShieldIcon size={14} aria-hidden="true" />
-                Kullanıcı yönetimi
-              </Link>
-            )}
-            {user.role === 'admin' && (
-              <Link
-                to="/yonetim/denetim"
+                <ArrowDownUpIcon size={14} aria-hidden="true" />
+                {t('user.configTransfer')}
+              </button>
+
+              <button
+                type="button"
                 role="menuitem"
-                className="flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] text-fg-dim transition-colors hover:bg-surface-2 hover:text-fg"
-                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-left text-[13px] text-fg-dim transition-colors hover:bg-surface-2 hover:text-fg"
+                onClick={() => void logout()}
               >
-                <DatabaseIcon size={14} aria-hidden="true" />
-                Denetim akışı
-              </Link>
-            )}
-            <button
-              type="button"
-              role="menuitem"
-              className="flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-left text-[13px] text-fg-dim transition-colors hover:bg-surface-2 hover:text-fg"
-              onClick={() => void logout()}
-            >
-              <LogOutIcon size={14} aria-hidden="true" />
-              Çıkış yap
-            </button>
+                <LogOutIcon size={14} aria-hidden="true" />
+                {t('user.signOut')}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      {configOpen && <ConfigTransferDialog onClose={() => setConfigOpen(false)} />}
+    </>
   );
 }

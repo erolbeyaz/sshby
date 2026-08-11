@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { AlertCircleIcon, EyeIcon, EyeOffIcon, ShieldIcon, XIcon } from 'lucide-react';
+import { useT } from '@/lib/i18n';
 
 /**
  * Yönetici parolası istemi.
@@ -21,6 +22,7 @@ export function SudoPrompt({
   onSubmit: (password: string) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
 
@@ -35,13 +37,13 @@ export function SudoPrompt({
         <div className="flex items-start gap-2.5 px-5 pb-1 pt-4">
           <ShieldIcon size={15} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
           <h2 className="flex-1 font-mono text-[12px] font-semibold uppercase tracking-[0.14em]">
-            Yönetici parolası gerekli
+            {t('sudo.title')}
           </h2>
           <button
             type="button"
             className="btn-ghost -mt-1 rounded p-1"
             onClick={onCancel}
-            aria-label="Kapat"
+            aria-label={t('common.close')}
           >
             <XIcon size={14} />
           </button>
@@ -49,9 +51,7 @@ export function SudoPrompt({
 
         <form onSubmit={handleSubmit} className="px-5 pb-5">
           <p className="mb-4 text-[12.5px] leading-relaxed text-fg-dim">
-            <span className="font-mono text-fg">{hostName}</span> üzerinde bu dizine erişmek
-            için sudo parolanız gerekiyor. Parola kaydedilmez, yalnızca oturum boyunca bellekte
-            tutulur.
+            {t('sudo.body', { host: hostName })}
           </p>
 
           <div className="relative">
@@ -60,16 +60,16 @@ export function SudoPrompt({
               type={visible ? 'text' : 'password'}
               autoComplete="off"
               className="input pr-10 font-mono"
-              placeholder="Sudo parolası"
+              placeholder={t('sudo.placeholder')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              aria-label="Sudo parolası"
+              aria-label={t('sudo.placeholder')}
             />
             <button
               type="button"
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-fg-dim hover:text-fg"
               onClick={() => setVisible((v) => !v)}
-              aria-label={visible ? 'Parolayı gizle' : 'Parolayı göster'}
+              aria-label={visible ? t('quick.hideSecret') : t('quick.showSecret')}
             >
               {visible ? <EyeOffIcon size={14} /> : <EyeIcon size={14} />}
             </button>
@@ -92,14 +92,14 @@ export function SudoPrompt({
               onClick={onCancel}
               disabled={busy}
             >
-              İptal
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="btn btn-primary font-mono text-[11.5px] uppercase tracking-[0.12em]"
               disabled={busy || password.length === 0}
             >
-              {busy ? 'Doğrulanıyor…' : 'Onayla'}
+              {busy ? t('sudo.verifying') : t('sudo.confirm')}
             </button>
           </div>
         </form>

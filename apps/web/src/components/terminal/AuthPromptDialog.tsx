@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { AlertCircleIcon, LockIcon } from 'lucide-react';
 import type { ServerTerminalMessage } from '@sshby/shared';
+import { useT } from '@/lib/i18n';
 
 type Prompt = Extract<ServerTerminalMessage, { type: 'auth_prompt' }>;
 
@@ -21,6 +22,7 @@ export function AuthPromptDialog({
   onSubmit: (password: string) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [password, setPassword] = useState('');
 
   function handleSubmit(event: FormEvent) {
@@ -33,13 +35,13 @@ export function AuthPromptDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Parola gerekli"
+        aria-label={t('authPrompt.title')}
         className="w-full max-w-md rounded-panel border border-line bg-surface shadow-2xl shadow-black/50"
       >
         <div className="flex items-start gap-3 border-b border-line px-5 py-4">
           <LockIcon size={18} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
           <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold">Parola gerekli</h2>
+            <h2 className="text-[15px] font-semibold">{t('authPrompt.title')}</h2>
             <p className="mt-0.5 truncate font-mono text-[12.5px] text-fg-dim">
               {prompt.hostLabel}
             </p>
@@ -53,13 +55,13 @@ export function AuthPromptDialog({
               className="flex items-start gap-2 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-[13px] text-danger"
             >
               <AlertCircleIcon size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-              Sunucu parolayı kabul etmedi. Tekrar deneyin.
+              {t('authPrompt.retry')}
             </p>
           )}
 
           <label className="block">
             <span className="mb-1.5 block text-[13px] font-medium">
-              <span className="font-mono">{prompt.username}</span> kullanıcısının parolası
+              {t('authPrompt.label', { user: prompt.username })}
             </span>
             <input
               type="password"
@@ -71,17 +73,14 @@ export function AuthPromptDialog({
             />
           </label>
 
-          <p className="text-[12px] leading-relaxed text-fg-dim">
-            Bu parola kaydedilmez; yalnızca bu bağlantı için kullanılır. Her seferinde
-            sormasını istemiyorsanız kasaya bir kayıt ekleyip sunucuya atayabilirsiniz.
-          </p>
+          <p className="text-[12px] leading-relaxed text-fg-dim">{t('authPrompt.notice')}</p>
 
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" className="btn" onClick={onCancel}>
-              Vazgeç
+              {t('common.cancel')}
             </button>
             <button type="submit" className="btn btn-primary">
-              Bağlan
+              {t('authPrompt.connect')}
             </button>
           </div>
         </form>

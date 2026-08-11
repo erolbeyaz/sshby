@@ -2,13 +2,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircleIcon, LoaderIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { PublicUser, RegistrationSettings, UserRole } from '@sshby/shared';
-import { apiFetch, ApiRequestError } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import { localeTag, useApiError, useI18n } from '@/lib/i18n';
+import { useDocumentTitle } from '@/lib/use-document-title';
 
 export function AdminUsersPage() {
+  const { lang, t } = useI18n();
+  const apiError = useApiError();
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+
+  useDocumentTitle('Users');
 
   const usersQuery = useQuery({
     queryKey: ['users'],
@@ -21,7 +27,7 @@ export function AdminUsersPage() {
   });
 
   function handleError(err: unknown) {
-    setError(err instanceof ApiRequestError ? err.message : 'Beklenmeyen bir hata oluştu.');
+    setError(apiError(err));
   }
 
   const roleMutation = useMutation({
@@ -67,8 +73,8 @@ export function AdminUsersPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-8 py-12">
-      <p className="eyebrow">Yönetim</p>
-      <h1 className="mt-2 text-[28px] font-semibold tracking-tight">Kullanıcılar</h1>
+      <p className="eyebrow">{t('admin.eyebrow')}</p>
+      <h1 className="mt-2 text-[28px] font-semibold tracking-tight">{t('adminUsers.title')}</h1>
 
       {error && (
         <p
@@ -81,7 +87,7 @@ export function AdminUsersPage() {
       )}
 
       <section className="panel mt-8 p-5">
-        <h2 className="eyebrow mb-4">Kayıt politikası</h2>
+        <h2 className="eyebrow mb-4">{t('adminUsers.registrationPolicy')}</h2>
         {registration ? (
           <label className="flex cursor-pointer items-start gap-3">
             <input
@@ -94,25 +100,22 @@ export function AdminUsersPage() {
               }
             />
             <span className="text-[13px] leading-snug">
-              Yeni kayıt alımı açık
-              <span className="mt-0.5 block text-fg-dim">
-                Kapatıldığında kimse kendi hesabını oluşturamaz; kullanıcıları buradan siz
-                yönetirsiniz.
-              </span>
+              {t('adminUsers.registrationOpen')}
+              <span className="mt-0.5 block text-fg-dim">{t('adminUsers.registrationHint')}</span>
             </span>
           </label>
         ) : (
-          <p className="font-mono text-[13px] text-fg-dim">yükleniyor…</p>
+          <p className="font-mono text-[13px] text-fg-dim">{t('common.loading')}</p>
         )}
       </section>
 
       <section className="mt-8">
-        <h2 className="eyebrow mb-4">Hesaplar</h2>
+        <h2 className="eyebrow mb-4">{t('adminUsers.accounts')}</h2>
 
         {usersQuery.isPending && (
           <p className="flex items-center gap-2 font-mono text-[13px] text-fg-dim">
             <LoaderIcon size={14} className="animate-spin" aria-hidden="true" />
-            yükleniyor…
+            {t('common.loading')}
           </p>
         )}
 
@@ -121,10 +124,10 @@ export function AdminUsersPage() {
             <table className="w-full min-w-[640px] text-left text-[13px]">
               <thead className="border-b border-line bg-surface-2">
                 <tr className="eyebrow">
-                  <th className="px-4 py-2.5 font-medium">Kullanıcı</th>
-                  <th className="px-4 py-2.5 font-medium">Rol</th>
-                  <th className="px-4 py-2.5 font-medium">Son giriş</th>
-                  <th className="px-4 py-2.5 font-medium">Durum</th>
+                  <th className="px-4 py-2.5 font-medium">{t('adminUsers.colUser')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('adminUsers.colRole')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('adminUsers.colLastLogin')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('adminUsers.colStatus')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,7 +138,11 @@ export function AdminUsersPage() {
                       <td className="px-4 py-3">
                         <div className="font-medium">
                           {user.displayName}
-                          {isSelf && <span className="ml-2 text-[11px] text-fg-dim">(siz)</span>}
+                          {isSelf && (
+                            <span className="ml-2 text-[11px] text-fg-dim">
+                              {t('adminUsers.you')}
+                            </span>
+                          )}
                         </div>
                         <div className="font-mono text-[11.5px] text-fg-dim">{user.email}</div>
                       </td>
@@ -148,13 +155,13 @@ export function AdminUsersPage() {
                             roleMutation.mutate({ id: user.id, role: e.target.value as UserRole })
                           }
                         >
-                          <option value="user">kullanıcı</option>
-                          <option value="admin">yönetici</option>
+                          <option value="user">{t('adminUsers.roleUser')}</option>
+                          <option value="admin">{t('adminUsers.roleAdmin')}</option>
                         </select>
                       </td>
                       <td className="px-4 py-3 font-mono text-[12px] text-fg-dim">
                         {user.lastLoginAt
-                          ? new Date(user.lastLoginAt).toLocaleString('tr-TR')
+                          ? new Date(user.lastLoginAt).toLocaleString(localeTag(lang))
                           : '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -166,7 +173,7 @@ export function AdminUsersPage() {
                             activeMutation.mutate({ id: user.id, isActive: !user.isActive })
                           }
                         >
-                          {user.isActive ? 'Pasife al' : 'Etkinleştir'}
+                          {user.isActive ? t('adminUsers.deactivate') : t('adminUsers.activate')}
                         </button>
                       </td>
                     </tr>

@@ -8,13 +8,15 @@
  * sessizce hiçbir şey olmaması en kötü davranış olurdu.
  */
 
+import type { TranslationKey } from '@/lib/i18n';
+
+/**
+ * Hata metni değil **çeviri anahtarı** döndürülür: bu modül bir React bileşeni
+ * olmadığı için `useT()` çağıramaz, mesajı çağıran taraf kendi dilinde çevirir.
+ */
 export type ClipboardResult =
   | { ok: true; text: string }
-  | { ok: false; reason: string };
-
-const INSECURE_HINT =
-  'Tarayıcı panoya erişemiyor. Bu özellik yalnızca HTTPS (ya da localhost) ' +
-  'üzerinden çalışır. Şimdilik Ctrl+V ile yapıştırabilirsiniz.';
+  | { ok: false; reasonKey: TranslationKey };
 
 /**
  * Panoyu programatik okuma yalnızca sağ tık menüsünde kullanılır. Ctrl+V
@@ -23,22 +25,20 @@ const INSECURE_HINT =
  */
 export async function readClipboard(): Promise<ClipboardResult> {
   if (typeof navigator.clipboard?.readText !== 'function') {
-    return { ok: false, reason: INSECURE_HINT };
+    return { ok: false, reasonKey: 'clipboard.insecure' };
   }
 
   try {
     return { ok: true, text: await navigator.clipboard.readText() };
   } catch {
     // Kullanıcı izni reddettiyse ya da tarayıcı politikası engellediyse.
-    return {
-      ok: false,
-      reason:
-        'Pano okunamadı. Tarayıcı izin istemişse onaylayın ya da Ctrl+V ile yapıştırın.',
-    };
+    return { ok: false, reasonKey: 'clipboard.readFailed' };
   }
 }
 
-export async function copyText(text: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+export async function copyText(
+  text: string,
+): Promise<{ ok: true } | { ok: false; reasonKey: TranslationKey }> {
   if (typeof navigator.clipboard?.writeText === 'function') {
     try {
       await navigator.clipboard.writeText(text);
@@ -71,5 +71,5 @@ export async function copyText(text: string): Promise<{ ok: true } | { ok: false
     // Aşağıdaki mesajla bitir.
   }
 
-  return { ok: false, reason: 'Panoya kopyalanamadı. Metni seçip Ctrl+C kullanabilirsiniz.' };
+  return { ok: false, reasonKey: 'clipboard.copyFailed' };
 }

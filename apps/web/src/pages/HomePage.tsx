@@ -3,21 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIcon,
+  ArrowDownUpIcon,
   DatabaseIcon,
   FolderIcon,
   KeyRoundIcon,
   PlugZapIcon,
   ServerIcon,
   TerminalIcon,
-  UserIcon,
   ZapIcon,
   type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Host } from '@sshby/shared';
+import { ConfigTransferDialog } from '@/components/dialogs/ConfigTransferDialog';
 import { apiFetch } from '@/lib/api';
+import { localeTag, useI18n, useT, type TranslateFn, type TranslationKey } from '@/lib/i18n';
 import { useInventory } from '@/lib/queries';
 import { hostConnectionState, useTerminalStore } from '@/lib/terminal-store';
+import { useDocumentTitle } from '@/lib/use-document-title';
 
 interface Dashboard {
   version: string;
@@ -28,68 +31,47 @@ interface Dashboard {
   activity: { action: string; outcome: string; serverName: string | null; at: string }[];
 }
 
-/** Denetim aksiyonlarının insan okunur karşılığı. */
-const ACTION_LABEL: Record<string, string> = {
-  'ssh.connect': 'Terminal',
-  'ssh.connect_failed': 'Bağlantı başarısız',
-  'ssh.disconnect': 'Oturum kapandı',
-  'ssh.command': 'Komut',
-  'ssh.hostkey_accepted': 'Host anahtarı kabul edildi',
-  'ssh.hostkey_changed': 'Host anahtarı değişti',
-  'sftp.list': 'Dosya yöneticisi',
-  'sftp.download': 'Dosya indirildi',
-  'sftp.upload': 'Dosya yüklendi',
-  'sftp.delete': 'Dosya silindi',
-  'sftp.rename': 'Yeniden adlandırıldı',
-  'sftp.mkdir': 'Klasör oluşturuldu',
-  'sftp.chmod': 'İzin değişti',
-  'host.create': 'Sunucu eklendi',
-  'host.update': 'Sunucu güncellendi',
-  'host.delete': 'Sunucu silindi',
-  'host.move': 'Sunucu taşındı',
-  'folder.create': 'Klasör eklendi',
-  'folder.update': 'Klasör güncellendi',
-  'folder.delete': 'Klasör silindi',
-  'credential.create': 'Kimlik eklendi',
-  'credential.update': 'Kimlik güncellendi',
-  'credential.delete': 'Kimlik silindi',
-  'settings.change': 'Ayar değişti',
-  'auth.register': 'Kayıt olundu',
-  'auth.login': 'Giriş yapıldı',
-  'auth.login_failed': 'Başarısız giriş',
-  'auth.logout': 'Çıkış yapıldı',
-  'auth.token_refresh': 'Oturum yenilendi',
-  'user.role_change': 'Rol değişti',
-  'user.activate': 'Kullanıcı etkinleştirildi',
-  'user.deactivate': 'Kullanıcı pasifleştirildi',
-  'config.export': 'Yapılandırma dışa aktarıldı',
-  'config.import': 'Yapılandırma içe aktarıldı',
-};
-
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${days}d ${hours}h ${minutes}m`;
+/**
+ * Denetim aksiyonunun insan okunur karşılığı. Sözlükte karşılığı olmayan bir
+ * aksiyon ham hâliyle gösterilir — sunucu yeni bir olay tipi eklediğinde ekran
+ * boş kalmasın diye.
+ */
+function actionLabel(t: TranslateFn, action: string): string {
+  const key = `action.${action}` as TranslationKey;
+  const label = t(key);
+  return label === key ? action : label;
 }
 
-/** "3sa", "11d" — etkinlik listesindeki göreli zaman. */
-function relativeTime(iso: string): string {
+function formatUptime(t: TranslateFn, seconds: number): string {
+  return t('time.uptime', {
+    d: Math.floor(seconds / 86400),
+    h: Math.floor((seconds % 86400) / 3600),
+    m: Math.floor((seconds % 3600) / 60),
+  });
+}
+
+/** Etkinlik listesindeki göreli zaman. */
+function relativeTime(t: TranslateFn, iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return `${seconds}sn`;
+  if (seconds < 60) return t('time.seconds', { n: seconds });
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}dk`;
+  if (minutes < 60) return t('time.minutes', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}sa`;
-  return `${Math.floor(hours / 24)}g`;
+  if (hours < 24) return t('time.hours', { n: hours });
+  return t('time.days', { n: Math.floor(hours / 24) });
 }
 
 export function HomePage() {
+  const t = useT();
+  const { lang } = useI18n();
   const inventory = useInventory();
   const navigate = useNavigate();
   const openTab = useTerminalStore((s) => s.openTab);
   const setQuickConnectOpen = useTerminalStore((s) => s.setQuickConnectOpen);
   const tabs = useTerminalStore((s) => s.tabs);
+  const [configOpen, setConfigOpen] = useState(false);
+
+  useDocumentTitle('Dashboard');
 
   const dashboard = useQuery({
     queryKey: ['dashboard'],
@@ -106,23 +88,21 @@ export function HomePage() {
   // Saatin ilerlemesi için; çalışma süresi kartı canlı kalsın.
   const [, setTick] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => setTick((t) => t + 1), 30_000);
+    const timer = setInterval(() => setTick((n) => n + 1), 30_000);
     return () => clearInterval(timer);
   }, []);
 
   const hosts = inventory.data?.hosts ?? [];
   const data = dashboard.data;
 
-  const online = hosts.filter(
-    (host) => hostConnectionState(tabs, host.id) === 'connected',
-  ).length;
+  const online = hosts.filter((host) => hostConnectionState(tabs, host.id) === 'connected').length;
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-6">
       <div className="flex items-baseline gap-3">
-        <h1 className="text-[20px] font-semibold tracking-tight">Gösterge paneli</h1>
+        <h1 className="text-[20px] font-semibold tracking-tight">{t('home.title')}</h1>
         <span className="font-mono text-[12px] text-fg-dim">
-          {new Date().toLocaleDateString('tr-TR', {
+          {new Date().toLocaleDateString(localeTag(lang), {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
@@ -135,53 +115,63 @@ export function HomePage() {
         <div className="min-w-0 space-y-4">
           {/* ------------------------------------------------ üst göstergeler */}
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border border-line bg-line lg:grid-cols-4">
-            <Stat label="Sürüm" value={data?.version ?? '—'} accent />
+            <Stat label={t('home.version')} value={data?.version ?? '—'} accent />
             <Stat
-              label="Çalışma süresi"
-              value={data ? formatUptime(data.uptimeSeconds) : '—'}
+              label={t('home.uptime')}
+              value={data ? formatUptime(t, data.uptimeSeconds) : '—'}
             />
             <Stat
-              label="Veritabanı"
-              value={health.data?.database === 'ok' ? 'Sağlıklı' : health.isPending ? '…' : 'Hata'}
+              label={t('home.database')}
+              value={
+                health.data?.database === 'ok'
+                  ? t('home.databaseOk')
+                  : health.isPending
+                    ? '…'
+                    : t('home.databaseError')
+              }
               tone={health.data?.database === 'ok' ? 'ok' : 'danger'}
             />
-            <Stat label="Bağlı sunucu" value={`${online} / ${hosts.length}`} />
+            <Stat label={t('home.connectedHosts')} value={`${online} / ${hosts.length}`} />
           </div>
 
           <div className="grid grid-cols-1 gap-px overflow-hidden rounded-panel border border-line bg-line sm:grid-cols-3">
-            <Count icon={ServerIcon} label="Toplam sunucu" value={data?.totals.hosts ?? 0} />
-            <Count icon={KeyRoundIcon} label="Kimlik bilgisi" value={data?.totals.credentials ?? 0} />
-            <Count icon={FolderIcon} label="Klasör" value={data?.totals.folders ?? 0} />
+            <Count icon={ServerIcon} label={t('home.totalHosts')} value={data?.totals.hosts ?? 0} />
+            <Count
+              icon={KeyRoundIcon}
+              label={t('home.credentials')}
+              value={data?.totals.credentials ?? 0}
+            />
+            <Count icon={FolderIcon} label={t('home.folders')} value={data?.totals.folders ?? 0} />
           </div>
 
           {/* ---------------------------------------------------- hızlı eylem */}
           <section className="panel">
-            <h2 className="eyebrow border-b border-line px-4 py-2.5">Hızlı eylemler</h2>
+            <h2 className="eyebrow border-b border-line px-4 py-2.5">{t('home.quickActions')}</h2>
             <div className="grid grid-cols-1 gap-px bg-line sm:grid-cols-2">
               <Action
                 icon={ZapIcon}
-                title="Hızlı bağlantı"
-                description="Kaydetmeden tek seferlik bağlan"
+                title={t('home.actionQuickConnect')}
+                description={t('home.actionQuickConnectDesc')}
                 onClick={() => setQuickConnectOpen(true)}
               />
               <Action
                 icon={KeyRoundIcon}
-                title="Kimlik bilgisi ekle"
-                description="SSH anahtarı ya da parola sakla"
-                onClick={() => navigate('/kasa')}
+                title={t('home.actionAddCredential')}
+                description={t('home.actionAddCredentialDesc')}
+                onClick={() => navigate('/vault')}
               />
               <Action
                 icon={TerminalIcon}
-                title="Sunucuya bağlan"
-                description="Soldaki ağaçtan çift tıklayın"
-                onClick={() => hosts[0] && navigate(`/sunucu/${hosts[0].id}`)}
+                title={t('home.actionConnect')}
+                description={t('home.actionConnectDesc')}
+                onClick={() => hosts[0] && navigate(`/server/${hosts[0].id}`)}
                 disabled={hosts.length === 0}
               />
               <Action
-                icon={UserIcon}
-                title="Hesabım"
-                description="Oturumlar ve profil"
-                onClick={() => navigate('/kasa')}
+                icon={ArrowDownUpIcon}
+                title={t('home.actionConfig')}
+                description={t('home.actionConfigDesc')}
+                onClick={() => setConfigOpen(true)}
               />
             </div>
           </section>
@@ -189,23 +179,21 @@ export function HomePage() {
           {/* --------------------------------------------------- sunucu listesi */}
           <section className="panel">
             <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-              <h2 className="eyebrow">Sunucu durumu</h2>
+              <h2 className="eyebrow">{t('home.hostStatus')}</h2>
               <span className="font-mono text-[11px] text-fg-dim">
-                {online}/{hosts.length} bağlı
+                {t('home.connectedRatio', { online, total: hosts.length })}
               </span>
             </div>
 
             {hosts.length === 0 ? (
-              <p className="px-4 py-8 text-center text-[13px] text-fg-dim">
-                Henüz sunucu yok. Soldaki ağaçtan ekleyebilirsiniz.
-              </p>
+              <p className="px-4 py-8 text-center text-[13px] text-fg-dim">{t('home.noHosts')}</p>
             ) : (
               <div className="max-h-[280px] overflow-y-auto">
                 {hosts.map((host) => (
                   <HostRow
                     key={host.id}
                     host={host}
-                    onOpen={() => navigate(`/sunucu/${host.id}`)}
+                    onOpen={() => navigate(`/server/${host.id}`)}
                     onConnect={() => openTab(host.id, host.name)}
                   />
                 ))}
@@ -218,15 +206,15 @@ export function HomePage() {
         <section className="panel flex min-h-0 flex-col xl:max-h-[calc(100vh-140px)]">
           <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
             <ActivityIcon size={12} className="shrink-0 text-fg-dim" aria-hidden="true" />
-            <h2 className="eyebrow flex-1">Son etkinlikler</h2>
+            <h2 className="eyebrow flex-1">{t('home.recentActivity')}</h2>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             {data?.activity.length === 0 && (
               <p className="px-4 py-8 text-center text-[12.5px] leading-relaxed text-fg-dim">
-                Henüz etkinlik yok.
+                {t('home.noActivity')}
                 <br />
-                Bir sunucuya bağlandığınızda burada görünür.
+                {t('home.noActivityHint')}
               </p>
             )}
 
@@ -243,15 +231,11 @@ export function HomePage() {
                   aria-hidden="true"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-[12px]">
-                    {item.serverName ?? 'sshby'}
-                  </p>
-                  <p className="truncate text-[11px] text-fg-dim">
-                    {ACTION_LABEL[item.action] ?? item.action}
-                  </p>
+                  <p className="truncate font-mono text-[12px]">{item.serverName ?? 'sshby'}</p>
+                  <p className="truncate text-[11px] text-fg-dim">{actionLabel(t, item.action)}</p>
                 </div>
                 <span className="shrink-0 font-mono text-[10.5px] text-fg-dim">
-                  {relativeTime(item.at)}
+                  {relativeTime(t, item.at)}
                 </span>
               </div>
             ))}
@@ -262,7 +246,7 @@ export function HomePage() {
             sorusunu hiçbir zaman sormak zorunda kalmamalı.
           */}
           <Link
-            to="/yonetim/denetim"
+            to="/admin/audit"
             className="flex shrink-0 items-center gap-2 border-t border-line px-4 py-2.5 transition-colors hover:bg-surface-2"
           >
             <DatabaseIcon
@@ -276,10 +260,10 @@ export function HomePage() {
             <span className="min-w-0 flex-1">
               <span className="block text-[11.5px]">
                 {!data?.audit.enabled
-                  ? 'Denetim aktarımı kapalı'
+                  ? t('home.auditDisabled')
                   : data.audit.ok
-                    ? "Elasticsearch'e yazılıyor"
-                    : 'Denetim gönderimi başarısız'}
+                    ? t('home.auditWriting')
+                    : t('home.auditFailing')}
               </span>
               <span className="block truncate font-mono text-[10px] text-fg-dim">
                 {data?.audit.message ?? '—'}
@@ -289,6 +273,8 @@ export function HomePage() {
           </Link>
         </section>
       </div>
+
+      {configOpen && <ConfigTransferDialog onClose={() => setConfigOpen(false)} />}
     </div>
   );
 }
@@ -371,6 +357,7 @@ function HostRow({
   onOpen: () => void;
   onConnect: () => void;
 }) {
+  const t = useT();
   const state = useTerminalStore((s) => hostConnectionState(s.tabs, host.id));
 
   return (
@@ -381,7 +368,7 @@ function HostRow({
           state === 'connected' ? 'bg-accent' : state === 'connecting' ? 'bg-warn' : 'bg-danger',
         )}
         role="img"
-        aria-label={state === 'connected' ? 'bağlı' : 'bağlı değil'}
+        aria-label={state === 'connected' ? t('home.connectedLabel') : t('home.disconnectedLabel')}
       />
       <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
         <span className="block truncate font-mono text-[12.5px]">{host.name}</span>
@@ -393,20 +380,22 @@ function HostRow({
       <span
         className={clsx(
           'shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.1em]',
-          state === 'connected'
-            ? 'border-accent/40 text-accent'
-            : 'border-line text-fg-dim',
+          state === 'connected' ? 'border-accent/40 text-accent' : 'border-line text-fg-dim',
         )}
       >
-        {state === 'connected' ? 'çevrimiçi' : state === 'connecting' ? 'bağlanıyor' : 'kapalı'}
+        {state === 'connected'
+          ? t('home.online')
+          : state === 'connecting'
+            ? t('home.connecting')
+            : t('home.offline')}
       </span>
 
       <button
         type="button"
         className="btn-ghost shrink-0 rounded p-1 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
         onClick={onConnect}
-        aria-label={`${host.name} sunucusuna bağlan`}
-        title="Terminal aç"
+        aria-label={t('home.connectTo', { name: host.name })}
+        title={t('home.openTerminal')}
       >
         <TerminalIcon size={13} />
       </button>

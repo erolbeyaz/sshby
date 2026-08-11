@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeftIcon, FolderIcon, SearchIcon, TerminalIcon, XIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { useT, type TranslateFn, type TranslationKey } from '@/lib/i18n';
 import { useTerminalStore, type SessionState } from '@/lib/terminal-store';
 
 const STATE_COLOR: Record<SessionState, string> = {
@@ -10,30 +11,30 @@ const STATE_COLOR: Record<SessionState, string> = {
   error: 'bg-danger',
 };
 
-const STATE_LABEL: Record<SessionState, string> = {
-  connecting: 'Bağlanıyor',
-  ready: 'Bağlı',
-  closed: 'Kapandı',
-  error: 'Hata',
+const STATE_KEY: Record<SessionState, TranslationKey> = {
+  connecting: 'connections.stateConnecting',
+  ready: 'connections.stateReady',
+  closed: 'connections.stateClosed',
+  error: 'connections.stateError',
 };
 
-function formatDuration(since: number): string {
+function formatDuration(t: TranslateFn, since: number): string {
   const total = Math.floor((Date.now() - since) / 1000);
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
   if (minutes >= 60) {
-    const hours = Math.floor(minutes / 60);
-    return `${hours}sa ${minutes % 60}dk süredir bağlı`;
+    return t('connections.durationHours', { h: Math.floor(minutes / 60), m: minutes % 60 });
   }
-  if (minutes > 0) return `${minutes}dk ${seconds}sn süredir bağlı`;
-  return `${seconds}sn süredir bağlı`;
+  if (minutes > 0) return t('connections.durationMinutes', { m: minutes, s: seconds });
+  return t('connections.durationSeconds', { s: seconds });
 }
 
 interface Connection {
   id: string;
   hostId: string;
   title: string;
-  kind: 'SSH' | 'Dosyalar';
+  /** `files` gösterimde çevrilir; tip kimliği dilden bağımsız kalmalı. */
+  kind: 'SSH' | 'files';
   state: SessionState;
   openedAt: number;
   /** Terminal sekmesine ait olanlar tıklanınca o sekmeye geçer. */
@@ -49,6 +50,7 @@ interface Connection {
  * görmek istediği kendi penceresindeki durum.
  */
 export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const tabs = useTerminalStore((s) => s.tabs);
   const activeTabId = useTerminalStore((s) => s.activeTabId);
   const setActive = useTerminalStore((s) => s.setActive);
@@ -84,7 +86,7 @@ export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
         id: `files-${fileTab.id}`,
         hostId: fileTab.hostId,
         title: fileTab.title,
-        kind: 'Dosyalar',
+        kind: 'files',
         state: 'ready',
         openedAt: 0,
         tabId: fileTab.id,
@@ -94,21 +96,23 @@ export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
   }, [tabs, fileTabs]);
 
   const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase('tr');
+    const needle = query.trim().toLocaleLowerCase();
     return needle
-      ? connections.filter((c) => c.title.toLocaleLowerCase('tr').includes(needle))
+      ? connections.filter((c) => c.title.toLocaleLowerCase().includes(needle))
       : connections;
   }, [connections, query]);
 
   return (
     <aside className="flex w-[280px] shrink-0 flex-col border-r border-line bg-surface">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3.5">
-        <h2 className="flex-1 text-[15px] font-semibold tracking-tight">Bağlantılar</h2>
+        <h2 className="flex-1 text-[15px] font-semibold tracking-tight">
+          {t('connections.title')}
+        </h2>
         <button
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={onClose}
-          aria-label="Bağlantılar panelini kapat"
+          aria-label={t('connections.closePanel')}
         >
           <ChevronLeftIcon size={15} />
         </button>
@@ -122,22 +126,22 @@ export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
         />
         <input
           className="input py-1.5 pl-7 pr-2 text-[12.5px]"
-          placeholder="Bağlantıları ara…"
+          placeholder={t('connections.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Bağlantılarda ara"
+          aria-label={t('connections.searchAria')}
         />
       </div>
 
       <div className="flex shrink-0 items-center gap-2 px-3.5 pb-1.5">
-        <span className="eyebrow flex-1">Açık</span>
+        <span className="eyebrow flex-1">{t('connections.open')}</span>
         <span className="pill">{filtered.length}</span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         {filtered.length === 0 && (
           <p className="px-3.5 py-6 text-center text-[12.5px] text-fg-dim">
-            {query ? 'Eşleşen bağlantı yok.' : 'Açık bağlantı yok.'}
+            {query ? t('connections.noMatch') : t('connections.none')}
           </p>
         )}
 
@@ -195,14 +199,16 @@ export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
                   >
                     {connection.title}
                   </span>
-                  <span className="pill shrink-0">{connection.kind}</span>
+                  <span className="pill shrink-0">
+                    {connection.kind === 'SSH' ? 'SSH' : t('connections.kindFiles')}
+                  </span>
                 </span>
                 <span className="mt-0.5 block truncate font-mono text-[10.5px] text-fg-dim">
-                  {connection.kind === 'Dosyalar'
-                    ? 'Bağlı'
+                  {connection.kind === 'files'
+                    ? t('connections.stateReady')
                     : connection.state === 'ready'
-                      ? formatDuration(connection.openedAt)
-                      : STATE_LABEL[connection.state]}
+                      ? formatDuration(t, connection.openedAt)
+                      : t(STATE_KEY[connection.state])}
                 </span>
               </button>
 
@@ -214,7 +220,7 @@ export function ConnectionsPanel({ onClose }: { onClose: () => void }) {
                   if (connection.kind === 'SSH') closeTab(connection.tabId);
                   else closeFileTab(connection.tabId);
                 }}
-                aria-label={`${connection.title} bağlantısını kapat`}
+                aria-label={t('connections.closeAria', { name: connection.title })}
               >
                 <XIcon size={12} />
               </button>

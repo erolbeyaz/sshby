@@ -2,12 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { AlertCircleIcon, LoaderIcon, ShieldCheckIcon } from 'lucide-react';
 import { loginRequestSchema, registerRequestSchema } from '@sshby/shared';
 import { Logo } from '@/components/brand/Logo';
-import { ApiRequestError } from '@/lib/api';
+import { Signature } from '@/components/layout/Signature';
 import { useAuthStore } from '@/lib/auth-store';
+import { useApiError, useT } from '@/lib/i18n';
+import { useDocumentTitle } from '@/lib/use-document-title';
 
 type Mode = 'login' | 'register';
 
 export function AuthPage() {
+  const t = useT();
+  const apiError = useApiError();
   const bootstrap = useAuthStore((s) => s.bootstrap);
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
@@ -22,6 +26,8 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+
+  useDocumentTitle(mode === 'register' ? 'Create account' : 'Sign in');
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -52,16 +58,14 @@ export function AuthPage() {
         await login({ email, password });
       }
     } catch (err) {
-      setError(
-        err instanceof ApiRequestError ? err.message : 'Beklenmeyen bir hata oluştu.',
-      );
+      setError(apiError(err));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-6 py-12">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6 py-12">
       <div className="w-full max-w-[380px]">
         <div className="mb-8 flex justify-center">
           <Logo size={30} showCaret />
@@ -70,25 +74,20 @@ export function AuthPage() {
         {firstRun && (
           <div className="mb-5 flex gap-2.5 rounded border border-accent/30 bg-accent-muted px-3.5 py-3 text-[13px] leading-snug">
             <ShieldCheckIcon size={15} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
-            <p>
-              İlk kurulum. Oluşturacağınız hesap <strong className="font-medium">yönetici</strong>{' '}
-              olacak ve Elasticsearch denetim ayarlarını yapılandırabilecek.
-            </p>
+            <p>{t('auth.firstRunNotice')}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="panel p-6">
           <h1 className="mb-1 text-lg font-semibold">
-            {mode === 'register' ? 'Hesap oluştur' : 'Giriş yap'}
+            {mode === 'register' ? t('auth.createAccount') : t('auth.signIn')}
           </h1>
           <p className="mb-6 text-[13px] text-fg-dim">
-            {mode === 'register'
-              ? 'Bu hesapla her yerden oturum açabilirsiniz.'
-              : 'Kayıtlı e-posta adresinizle devam edin.'}
+            {mode === 'register' ? t('auth.createAccountHint') : t('auth.signInHint')}
           </p>
 
           <div className="space-y-4">
-            <Field label="E-posta" htmlFor="email" error={fieldErrors.email}>
+            <Field label={t('auth.email')} htmlFor="email" error={fieldErrors.email}>
               <input
                 id="email"
                 type="email"
@@ -97,12 +96,16 @@ export function AuthPage() {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="ad.soyad@sirket.com.tr"
+                placeholder="name.surname@example.com"
               />
             </Field>
 
             {mode === 'register' && (
-              <Field label="Görünen ad" htmlFor="displayName" error={fieldErrors.displayName}>
+              <Field
+                label={t('auth.displayName')}
+                htmlFor="displayName"
+                error={fieldErrors.displayName}
+              >
                 <input
                   id="displayName"
                   type="text"
@@ -110,16 +113,16 @@ export function AuthPage() {
                   autoComplete="name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Ad Soyad"
+                  placeholder={t('auth.displayNamePlaceholder')}
                 />
               </Field>
             )}
 
             <Field
-              label="Parola"
+              label={t('common.password')}
               htmlFor="password"
               error={fieldErrors.password}
-              hint={mode === 'register' ? 'En az 12 karakter' : undefined}
+              hint={mode === 'register' ? t('auth.passwordHint') : undefined}
             >
               <input
                 id="password"
@@ -144,7 +147,7 @@ export function AuthPage() {
 
           <button type="submit" className="btn btn-primary mt-6 w-full" disabled={busy}>
             {busy && <LoaderIcon size={14} className="animate-spin" aria-hidden="true" />}
-            {mode === 'register' ? 'Hesap oluştur' : 'Giriş yap'}
+            {mode === 'register' ? t('auth.createAccount') : t('auth.signIn')}
           </button>
         </form>
 
@@ -153,7 +156,7 @@ export function AuthPage() {
             {mode === 'login' ? (
               registrationOpen ? (
                 <>
-                  Hesabınız yok mu?{' '}
+                  {t('auth.noAccount')}{' '}
                   <button
                     type="button"
                     className="text-accent hover:underline"
@@ -163,15 +166,15 @@ export function AuthPage() {
                       setFieldErrors({});
                     }}
                   >
-                    Kayıt olun
+                    {t('auth.signUpLink')}
                   </button>
                 </>
               ) : (
-                'Yeni kayıt alımı kapalı. Hesap için yöneticinizle görüşün.'
+                t('auth.registrationClosed')
               )
             ) : (
               <>
-                Hesabınız var mı?{' '}
+                {t('auth.haveAccount')}{' '}
                 <button
                   type="button"
                   className="text-accent hover:underline"
@@ -181,12 +184,16 @@ export function AuthPage() {
                     setFieldErrors({});
                   }}
                 >
-                  Giriş yapın
+                  {t('auth.signInLink')}
                 </button>
               </>
             )}
           </p>
         )}
+      </div>
+
+      <div className="mt-10">
+        <Signature />
       </div>
     </div>
   );

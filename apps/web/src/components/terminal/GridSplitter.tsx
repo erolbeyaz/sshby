@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import clsx from 'clsx';
+import { useT } from '@/lib/i18n';
 
 /**
  * Izgara panellerini ayıran, sürüklenebilir çizgi.
@@ -22,6 +23,7 @@ export function GridSplitter({
   /** Çift tık: tek bir sınırı değil, o eksenin tamamını eşitler. */
   onReset: () => void;
 }) {
+  const t = useT();
   const draggingRef = useRef(false);
 
   const compute = useCallback(
@@ -53,7 +55,7 @@ export function GridSplitter({
       aria-valuenow={Math.round(percent)}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label={vertical ? 'Sütun genişliğini ayarla' : 'Satır yüksekliğini ayarla'}
+      aria-label={vertical ? t('splitter.column') : t('splitter.row')}
       tabIndex={0}
       className={clsx(
         'absolute z-10 bg-transparent transition-colors hover:bg-accent/40 focus-visible:bg-accent/40',
@@ -89,7 +91,7 @@ export function GridSplitter({
         event.preventDefault();
       }}
       onDoubleClick={onReset}
-      title="Sürükleyerek boyutlandırın · çift tıkla eşitle"
+      title={t('splitter.title')}
     />
   );
 }

@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import type { StorageMount } from '@sshby/shared';
 import { apiFetch } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 
 function compact(bytes: number): string {
   const units = ['B', 'K', 'M', 'G', 'T'];
@@ -39,6 +40,7 @@ export function StorageWidget({
   currentPath: string | null;
   onSelect: (mount: string) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -92,7 +94,7 @@ export function StorageWidget({
                 : 'text-accent',
           )}
         >
-          %{active.percent} kullanılan
+          {t('storage.usedPercent', { n: active.percent })}
         </span>
       </button>
 
@@ -103,7 +105,10 @@ export function StorageWidget({
         />
       </div>
       <p className="mt-1 font-mono text-[10.5px] text-fg-dim">
-        {compact(active.usedBytes)} / {compact(active.totalBytes)} kullanıldı
+        {t('storage.usedOf', {
+          used: compact(active.usedBytes),
+          total: compact(active.totalBytes),
+        })}
       </p>
 
       {open && (

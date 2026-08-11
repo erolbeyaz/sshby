@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { AlertCircleIcon } from 'lucide-react';
 import { hostInputSchema, type Folder, type Host, type HostInput } from '@sshby/shared';
 import { Modal } from '@/components/ui/Modal';
-import { ApiRequestError } from '@/lib/api';
+import { useApiError, useT } from '@/lib/i18n';
 import { useCreateHost, useCredentials, useUpdateHost } from '@/lib/queries';
 
 export function HostDialog({
@@ -17,6 +17,8 @@ export function HostDialog({
   defaultFolderId: string | null;
   onClose: () => void;
 }) {
+  const t = useT();
+  const apiError = useApiError();
   const credentials = useCredentials();
   const createHost = useCreateHost();
   const updateHost = useUpdateHost();
@@ -81,44 +83,44 @@ export function HostDialog({
       else await createHost.mutateAsync(parsed.data);
       onClose();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Beklenmeyen bir hata oluştu.');
+      setError(apiError(err));
     }
   }
 
   return (
     <Modal
-      title={host ? 'Sunucuyu düzenle' : 'Sunucu ekle'}
-      description={host ? host.name : 'Bağlanılacak Linux sunucusunun bilgileri'}
+      title={host ? t('hostDialog.editTitle') : t('hostDialog.addTitle')}
+      description={host ? host.name : t('hostDialog.description')}
       onClose={onClose}
       wide
       footer={
         <>
           <button type="button" className="btn" onClick={onClose} disabled={busy}>
-            Vazgeç
+            {t('common.cancel')}
           </button>
           <button type="submit" form="host-form" className="btn btn-primary" disabled={busy}>
-            {host ? 'Kaydet' : 'Ekle'}
+            {host ? t('common.save') : t('common.add')}
           </button>
         </>
       }
     >
       <form id="host-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Ad" error={fieldErrors.name}>
+          <Field label={t('common.name')} error={fieldErrors.name}>
             <input
               className="input"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
-              placeholder="hybprod-master-01"
+              placeholder="prod-master-01"
             />
           </Field>
-          <Field label="Klasör">
+          <Field label={t('hostDialog.folder')}>
             <select
               className="input"
               value={form.folderId}
               onChange={(e) => set('folderId', e.target.value)}
             >
-              <option value="">— kök seviye —</option>
+              <option value="">{t('host.rootLevel')}</option>
               {folders.map((folder) => (
                 <option key={folder.id} value={folder.id}>
                   {folder.name}
@@ -129,7 +131,7 @@ export function HostDialog({
         </div>
 
         <div className="grid grid-cols-[1fr_120px] gap-4">
-          <Field label="Adres" error={fieldErrors.hostname}>
+          <Field label={t('hostDialog.address')} error={fieldErrors.hostname}>
             <input
               className="input font-mono"
               value={form.hostname}
@@ -137,7 +139,7 @@ export function HostDialog({
               placeholder="10.0.0.11"
             />
           </Field>
-          <Field label="Port" error={fieldErrors.port}>
+          <Field label={t('hostDialog.port')} error={fieldErrors.port}>
             <input
               className="input font-mono"
               inputMode="numeric"
@@ -151,10 +153,10 @@ export function HostDialog({
             için sıralama bu bağımlılığı görünür kılıyor. */}
         <div className="grid grid-cols-2 gap-4">
           <Field
-            label="Kimlik bilgisi"
+            label={t('hostDialog.credential')}
             hint={
               credentials.data && credentials.data.length === 0
-                ? 'Kasada henüz kayıt yok'
+                ? t('hostDialog.credentialEmpty')
                 : undefined
             }
           >
@@ -163,10 +165,11 @@ export function HostDialog({
               value={form.credentialId}
               onChange={(e) => set('credentialId', e.target.value)}
             >
-              <option value="">— seçilmedi —</option>
+              <option value="">{t('hostDialog.credentialNone')}</option>
               {credentials.data?.map((cred) => (
                 <option key={cred.id} value={cred.id}>
-                  {cred.name} ({cred.type === 'password' ? 'parola' : 'anahtar'})
+                  {cred.name} (
+                  {cred.type === 'password' ? t('vault.typePassword') : t('vault.typeKey')})
                   {cred.username ? ` · ${cred.username}` : ''}
                 </option>
               ))}
@@ -174,12 +177,12 @@ export function HostDialog({
           </Field>
 
           <Field
-            label="SSH kullanıcısı"
+            label={t('hostDialog.sshUser')}
             error={fieldErrors.username}
             hint={
               inheritedUsername
-                ? `boş bırakılırsa: ${inheritedUsername}`
-                : 'kimlik bilgisinde kullanıcı adı yok, buraya yazın'
+                ? t('hostDialog.inheritHint', { name: inheritedUsername })
+                : t('hostDialog.noInheritHint')
             }
           >
             <input
@@ -192,7 +195,7 @@ export function HostDialog({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Varsayılan dizin" hint="SFTP bu dizinde açılır">
+          <Field label={t('hostDialog.defaultPath')} hint={t('hostDialog.defaultPathHint')}>
             <input
               className="input font-mono"
               value={form.defaultPath}
@@ -200,12 +203,12 @@ export function HostDialog({
               placeholder="/var/log"
             />
           </Field>
-          <Field label="Etiketler" hint="virgülle ayırın">
+          <Field label={t('hostDialog.tags')} hint={t('hostDialog.tagsHint')}>
             <input
               className="input"
               value={form.tags}
               onChange={(e) => set('tags', e.target.value)}
-              placeholder="üretim, k8s"
+              placeholder={t('hostDialog.tagsPlaceholder')}
             />
           </Field>
         </div>

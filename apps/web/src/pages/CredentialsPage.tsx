@@ -2,15 +2,20 @@ import { useState, type FormEvent } from 'react';
 import { AlertCircleIcon, KeyRoundIcon, LoaderIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import type { CredentialSummary } from '@sshby/shared';
 import { Modal } from '@/components/ui/Modal';
-import { ApiRequestError } from '@/lib/api';
+import { useApiError, useT } from '@/lib/i18n';
 import { useCreateCredential, useCredentials, useDeleteCredential } from '@/lib/queries';
+import { useDocumentTitle } from '@/lib/use-document-title';
 
 export function CredentialsPage() {
+  const t = useT();
+  const apiError = useApiError();
   const credentials = useCredentials();
   const deleteCredential = useDeleteCredential();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<CredentialSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useDocumentTitle('Vault');
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -18,7 +23,7 @@ export function CredentialsPage() {
       await deleteCredential.mutateAsync(pendingDelete.id);
       setPendingDelete(null);
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Silinemedi.');
+      setError(apiError(err, 'common.deleteFailed'));
     }
   }
 
@@ -26,16 +31,17 @@ export function CredentialsPage() {
     <div className="mx-auto max-w-3xl px-8 py-12">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="eyebrow">Kasa</p>
-          <h1 className="mt-2 text-[28px] font-semibold tracking-tight">Kimlik bilgileri</h1>
-          <p className="mt-2 max-w-[56ch] text-fg-dim">
-            Parolalar ve SSH anahtarları AES-256-GCM ile şifrelenerek saklanır. Kaydedildikten
-            sonra hiçbir ekrandan geri okunamaz — yalnızca üzerine yazılabilir.
-          </p>
+          <p className="eyebrow">{t('vault.eyebrow')}</p>
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight">{t('vault.title')}</h1>
+          <p className="mt-2 max-w-[56ch] text-fg-dim">{t('vault.intro')}</p>
         </div>
-        <button type="button" className="btn btn-primary shrink-0" onClick={() => setDialogOpen(true)}>
+        <button
+          type="button"
+          className="btn btn-primary shrink-0"
+          onClick={() => setDialogOpen(true)}
+        >
           <PlusIcon size={14} />
-          Ekle
+          {t('common.add')}
         </button>
       </div>
 
@@ -53,16 +59,14 @@ export function CredentialsPage() {
         {credentials.isPending && (
           <p className="flex items-center gap-2 font-mono text-[13px] text-fg-dim">
             <LoaderIcon size={14} className="animate-spin" aria-hidden="true" />
-            yükleniyor…
+            {t('common.loading')}
           </p>
         )}
 
         {credentials.data?.length === 0 && (
           <div className="panel flex flex-col items-center gap-3 px-6 py-12 text-center">
             <KeyRoundIcon size={22} className="text-fg-dim/50" aria-hidden="true" />
-            <p className="text-[13px] text-fg-dim">
-              Kasa boş. Sunuculara bağlanabilmek için önce bir kimlik bilgisi ekleyin.
-            </p>
+            <p className="text-[13px] text-fg-dim">{t('vault.empty')}</p>
           </div>
         )}
 
@@ -75,22 +79,25 @@ export function CredentialsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-[14px] font-medium">{cred.name}</span>
-                  <span className="pill">{cred.type === 'password' ? 'parola' : 'anahtar'}</span>
+                  <span className="pill">
+                    {cred.type === 'password' ? t('vault.typePassword') : t('vault.typeKey')}
+                  </span>
                 </div>
                 <div className="mt-0.5 truncate font-mono text-[11.5px] text-fg-dim">
-                  {cred.publicFingerprint ?? (cred.username ? `kullanıcı: ${cred.username}` : '—')}
+                  {cred.publicFingerprint ??
+                    (cred.username ? t('vault.userPrefix', { name: cred.username }) : '—')}
                 </div>
               </div>
 
               <span className="shrink-0 font-mono text-[11.5px] text-fg-dim">
-                {cred.usedByHostCount} sunucu
+                {t('vault.usedBy', { n: cred.usedByHostCount })}
               </span>
 
               <button
                 type="button"
                 className="btn-ghost shrink-0 rounded p-1.5 hover:text-danger"
                 onClick={() => setPendingDelete(cred)}
-                aria-label={`${cred.name} sil`}
+                aria-label={t('vault.deleteAria', { name: cred.name })}
               >
                 <Trash2Icon size={14} />
               </button>
@@ -103,12 +110,12 @@ export function CredentialsPage() {
 
       {pendingDelete && (
         <Modal
-          title="Kimlik bilgisini sil"
+          title={t('vault.deleteTitle')}
           onClose={() => setPendingDelete(null)}
           footer={
             <>
               <button type="button" className="btn" onClick={() => setPendingDelete(null)}>
-                Vazgeç
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -116,18 +123,16 @@ export function CredentialsPage() {
                 onClick={() => void confirmDelete()}
                 disabled={deleteCredential.isPending}
               >
-                Sil
+                {t('common.delete')}
               </button>
             </>
           }
         >
           <p className="text-[13px] leading-relaxed">
-            <strong className="font-medium">{pendingDelete.name}</strong> silinecek. Bu işlem geri
-            alınamaz.
+            <strong className="font-medium">{pendingDelete.name}</strong> {t('vault.deleteBody')}
             {pendingDelete.usedByHostCount > 0 && (
               <span className="mt-3 block rounded border border-warn/40 bg-warn/10 px-3 py-2 text-warn">
-                Bu kimlik bilgisini {pendingDelete.usedByHostCount} sunucu kullanıyor. Silindiğinde
-                o sunucular bağlanamaz hâle gelir.
+                {t('vault.deleteWarning', { n: pendingDelete.usedByHostCount })}
               </span>
             )}
           </p>
@@ -138,6 +143,8 @@ export function CredentialsPage() {
 }
 
 function CredentialDialog({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  const apiError = useApiError();
   const createCredential = useCreateCredential();
   const [type, setType] = useState<'password' | 'key'>('password');
   const [name, setName] = useState('');
@@ -165,20 +172,20 @@ function CredentialDialog({ onClose }: { onClose: () => void }) {
       );
       onClose();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Kaydedilemedi.');
+      setError(apiError(err, 'common.saveFailed'));
     }
   }
 
   return (
     <Modal
-      title="Kimlik bilgisi ekle"
-      description="Girdiğiniz gizli veri şifrelenerek saklanır ve bir daha gösterilmez."
+      title={t('vault.addTitle')}
+      description={t('vault.addDescription')}
       onClose={onClose}
       wide
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
-            Vazgeç
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -186,7 +193,7 @@ function CredentialDialog({ onClose }: { onClose: () => void }) {
             className="btn btn-primary"
             disabled={createCredential.isPending}
           >
-            Kaydet
+            {t('common.save')}
           </button>
         </>
       }
@@ -200,38 +207,36 @@ function CredentialDialog({ onClose }: { onClose: () => void }) {
               className={`btn flex-1 ${type === option ? 'border-accent text-accent' : ''}`}
               onClick={() => setType(option)}
             >
-              {option === 'password' ? 'Parola' : 'SSH anahtarı'}
+              {option === 'password' ? t('vault.password') : t('vault.sshKey')}
             </button>
           ))}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium">Ad</span>
+            <span className="mb-1.5 block text-[13px] font-medium">{t('common.name')}</span>
             <input
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="üretim-root"
+              placeholder={t('vault.namePlaceholder')}
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium">Varsayılan SSH kullanıcısı</span>
+            <span className="mb-1.5 block text-[13px] font-medium">{t('vault.defaultUser')}</span>
             <input
               className="input font-mono"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="root"
             />
-            <span className="mt-1 block text-[12px] text-fg-dim">
-              Sunucularda kullanıcı adı boş bırakılırsa bu kullanılır.
-            </span>
+            <span className="mt-1 block text-[12px] text-fg-dim">{t('vault.defaultUserHint')}</span>
           </label>
         </div>
 
         {type === 'password' ? (
           <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium">Parola</span>
+            <span className="mb-1.5 block text-[13px] font-medium">{t('vault.password')}</span>
             <input
               type="password"
               className="input font-mono"
@@ -243,7 +248,7 @@ function CredentialDialog({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium">Özel anahtar</span>
+              <span className="mb-1.5 block text-[13px] font-medium">{t('vault.privateKey')}</span>
               <textarea
                 className="input h-40 resize-y font-mono text-[12px]"
                 value={privateKey}
@@ -253,14 +258,14 @@ function CredentialDialog({ onClose }: { onClose: () => void }) {
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-medium">Anahtar parolası</span>
+              <span className="mb-1.5 block text-[13px] font-medium">{t('vault.passphrase')}</span>
               <input
                 type="password"
                 className="input font-mono"
                 autoComplete="new-password"
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
-                placeholder="anahtar korumalıysa"
+                placeholder={t('vault.passphrasePlaceholder')}
               />
             </label>
           </>

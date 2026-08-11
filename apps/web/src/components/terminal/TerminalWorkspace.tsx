@@ -29,6 +29,7 @@ import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { HistoryPanel } from '@/components/history/HistoryPanel';
 import { MetricsPanel } from '@/components/metrics/MetricsPanel';
 import { FileManager } from '@/components/sftp/FileManager';
+import { useT, type TranslationKey } from '@/lib/i18n';
 import { useTerminalStore, type SessionState, type TerminalTab } from '@/lib/terminal-store';
 import { GridSplitter } from './GridSplitter';
 import { TerminalPane } from './TerminalPane';
@@ -41,11 +42,11 @@ const STATE_COLOR: Record<SessionState, string> = {
   error: 'bg-danger',
 };
 
-const STATE_LABEL: Record<SessionState, string> = {
-  connecting: 'bağlanıyor',
-  ready: 'bağlı',
-  closed: 'kapandı',
-  error: 'hata',
+const STATE_LABEL: Record<SessionState, TranslationKey> = {
+  connecting: 'terminal.stateConnecting',
+  ready: 'terminal.stateReady',
+  closed: 'terminal.stateClosed',
+  error: 'terminal.stateError',
 };
 
 /**
@@ -102,6 +103,7 @@ export function TerminalWorkspace({
 }: {
   active: boolean;
 }) {
+  const t = useT();
   const tabs = useTerminalStore((s) => s.tabs);
   const activeTabId = useTerminalStore((s) => s.activeTabId);
   const layout = useTerminalStore((s) => s.layout);
@@ -225,9 +227,9 @@ export function TerminalWorkspace({
               onClick={() => {
                 if (activeTab) openFileTab(activeTab.hostId, activeTab.title);
               }}
-              aria-label="Dosya yöneticisi"
+              aria-label={t('terminal.fileManager')}
               aria-pressed={fileTabs.length > 0}
-              title="Bu sunucunun dosyalarını aç"
+              title={t('terminal.fileManagerTitle')}
             >
               <FolderIcon size={13} />
             </button>
@@ -235,9 +237,9 @@ export function TerminalWorkspace({
               type="button"
               className={clsx('btn-ghost rounded p-1.5', layout === 'tabs' && 'text-accent')}
               onClick={() => setLayout('tabs')}
-              aria-label="Tek pencere"
+              aria-label={t('terminal.singleWindow')}
               aria-pressed={layout === 'tabs'}
-              title="Tek pencere"
+              title={t('terminal.singleWindow')}
             >
               <SquareIcon size={13} />
             </button>
@@ -245,9 +247,9 @@ export function TerminalWorkspace({
               type="button"
               className={clsx('btn-ghost rounded p-1.5', layout === 'grid' && 'text-accent')}
               onClick={() => setLayout('grid')}
-              aria-label="Bölünmüş görünüm"
+              aria-label={t('terminal.splitView')}
               aria-pressed={layout === 'grid'}
-              title="Tüm oturumları yan yana göster"
+              title={t('terminal.splitViewTitle')}
             >
               <Columns2Icon size={13} />
             </button>
@@ -350,7 +352,7 @@ export function TerminalWorkspace({
                     type="button"
                     className="rounded p-0.5 opacity-0 transition-opacity hover:bg-line hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
                     onClick={() => closeHistoryTab(tab.id)}
-                    aria-label={`${tab.title} geçmiş panelini kapat`}
+                    aria-label={t('terminal.closeHistoryPanel', { name: tab.title })}
                   >
                     <XIcon size={11} />
                   </button>
@@ -416,7 +418,7 @@ export function TerminalWorkspace({
                     type="button"
                     className="rounded p-0.5 opacity-0 transition-opacity hover:bg-line hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
                     onClick={() => closeMetricTab(tab.id)}
-                    aria-label={`${tab.title} metrik panelini kapat`}
+                    aria-label={t('terminal.closeMetricsPanel', { name: tab.title })}
                   >
                     <XIcon size={11} />
                   </button>
@@ -486,7 +488,7 @@ export function TerminalWorkspace({
                     type="button"
                     className="rounded p-0.5 opacity-0 transition-opacity hover:bg-line hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
                     onClick={() => closeFileTab(tab.id)}
-                    aria-label={`${tab.title} dosya panelini kapat`}
+                    aria-label={t('terminal.closeFilePanel', { name: tab.title })}
                   >
                     <XIcon size={11} />
                   </button>
@@ -534,6 +536,7 @@ function Pane({
   visible: boolean;
   onClose: () => void;
 }) {
+  const t = useT();
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: paneItemId(tab.id),
     disabled: !gridMode,
@@ -559,8 +562,8 @@ function Pane({
           <button
             type="button"
             className="cursor-grab text-fg-dim hover:text-fg active:cursor-grabbing"
-            aria-label={`${tab.title} panelini taşı`}
-            title="Sürükleyerek yerini değiştirin"
+            aria-label={t('terminal.movePanel', { name: tab.title })}
+            title={t('terminal.dragToReorder')}
             {...attributes}
             {...listeners}
           >
@@ -574,7 +577,7 @@ function Pane({
             type="button"
             className="rounded p-0.5 text-fg-dim hover:bg-line hover:text-danger"
             onClick={onClose}
-            aria-label={`${tab.title} panelini kapat`}
+            aria-label={t('terminal.closePanel', { name: tab.title })}
           >
             <XIcon size={11} />
           </button>
@@ -600,6 +603,7 @@ function SortableTab({
   onSelect: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: tabItemId(tab.id),
   });
@@ -632,7 +636,7 @@ function SortableTab({
         type="button"
         className="flex cursor-grab items-center gap-2 active:cursor-grabbing"
         onClick={onSelect}
-        title={`${tab.title} · ${STATE_LABEL[tab.state]} — sürükleyerek sırasını değiştirin, orta tıkla kapatın`}
+        title={t('terminal.tabTitle', { name: tab.title, state: t(STATE_LABEL[tab.state]) })}
         {...attributes}
         {...listeners}
       >
@@ -644,7 +648,7 @@ function SortableTab({
         type="button"
         className="rounded p-0.5 opacity-0 transition-opacity hover:bg-line hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
         onClick={onClose}
-        aria-label={`${tab.title} sekmesini kapat`}
+        aria-label={t('terminal.closeTab', { name: tab.title })}
       >
         <XIcon size={11} />
       </button>

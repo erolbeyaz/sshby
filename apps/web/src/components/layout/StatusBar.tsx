@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
+import { useT } from '@/lib/i18n';
 import { useTerminalStore } from '@/lib/terminal-store';
+import { Signature } from './Signature';
 
 /**
  * Alt durum çubuğu. Denetim indeksi mor renkte ve kalıcı olarak görünür —
  * marka panosundaki kural bunu bir tasarım gereği olarak tanımlıyor.
  */
 export function StatusBar({ auditIndex }: { auditIndex: string | null }) {
+  const t = useT();
   const tabs = useTerminalStore((s) => s.tabs);
   const activeTabId = useTerminalStore((s) => s.activeTabId);
   const active = tabs.find((t) => t.id === activeTabId) ?? null;
@@ -15,12 +18,12 @@ export function StatusBar({ auditIndex }: { auditIndex: string | null }) {
 
   const label = active
     ? {
-        connecting: `SSH · ${active.title} · bağlanıyor…`,
-        ready: `SSH · ${active.title} · bağlı`,
-        closed: `SSH · ${active.title} · kapandı`,
-        error: `SSH · ${active.title} · hata`,
+        connecting: t('status.connecting', { name: active.title }),
+        ready: t('status.connected', { name: active.title }),
+        closed: t('status.closed', { name: active.title }),
+        error: t('status.error', { name: active.title }),
       }[active.state]
-    : 'SSH · bağlantı yok';
+    : t('status.noConnection');
 
   return (
     <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-line bg-surface-2 px-4 font-mono text-[11px] text-fg-dim">
@@ -32,11 +35,12 @@ export function StatusBar({ auditIndex }: { auditIndex: string | null }) {
       >
         {label}
       </span>
-      {duration && <span>oturum {duration}</span>}
-      {tabs.length > 1 && <span>{tabs.length} oturum açık</span>}
+      {duration && <span>{t('status.session', { duration })}</span>}
+      {tabs.length > 1 && <span>{t('status.openSessions', { n: tabs.length })}</span>}
       <div className="flex-1" />
+      <Signature />
       <span className={auditIndex ? 'text-trace' : undefined}>
-        {auditIndex ? `iz: ${auditIndex}` : 'iz: yapılandırılmadı'}
+        {auditIndex ? t('status.trace', { index: auditIndex }) : t('status.traceOff')}
       </span>
     </footer>
   );

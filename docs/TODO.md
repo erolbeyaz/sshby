@@ -19,6 +19,8 @@ Ayrıntılar için `CURRENT_STATE.md`:
   stratejisi, `config.export` / `config.import` denetim olayları)
 - **Quick Connect (hızlı bağlantı)** — envantere kaydetmeden tek seferlik erişim
 - **Komut geçmişi** — sunucu başına panel, kaynak `audit_outbox`
+- **İki dilli arayüz** — TR/ENG seçici, İngilizce URL ve sekme başlıkları,
+  hesap menüsüne taşınan yapılandırma aktarımı, "powered by erolbeyaz" imzası
 
 Faz 6'dan kalan tek iş:
 
@@ -74,6 +76,12 @@ Mevcut kapsamın dışında; Faz 8 bittikten sonraki aşama.
 - [ ] Yerel parola girişiyle bir arada yaşama
 
 ## Teknik borç
+
+- [ ] **Sunucudan gelen serbest metinler çevrilmiyor.** İçe aktarma raporundaki
+      uyarılar ve denetim gönderici durum mesajları Türkçe üretiliyor; İngilizce
+      arayüzde de Türkçe görünüyorlar. Kayıt adları içerdikleri için
+      şablonlanmaları (kod + parametre) gerekir. Sabit `code` taşıyan hatalar
+      zaten çevriliyor.
 
 
 - [ ] **Otomatik test paketi yok.** `pnpm test` betiği ve `vitest` bağımlılığı

@@ -16,36 +16,39 @@ import {
   type ImportConflictStrategy,
   type ImportCounts,
 } from '@sshby/shared';
-import { ApiRequestError } from '@/lib/api';
+import { Modal } from '@/components/ui/Modal';
+import { useApiError, useI18n, useT, localeTag, type TranslationKey } from '@/lib/i18n';
 import { useExportConfig, useImportConfig } from '@/lib/queries';
 
 /**
- * Yapılandırma taşıma ekranı.
+ * Yapılandırma taşıma.
+ *
+ * Ayrı bir sayfa değil, hesap menüsünden açılan bir diyalog: taşınan şey
+ * kullanıcının **kendi** envanteri ve kasası, yani bir uygulama bölümü değil
+ * hesap işlemi. Her kullanıcı yalnızca kendi verisini dışa aktarır; sunucu
+ * tarafındaki sorgular zaten sahiplik filtresiyle çalışıyor.
  *
  * Dışa aktarımda gizli verinin pakete girip girmeyeceği kullanıcının bilinçli
- * seçimi: paket bir dosya olarak dışarı çıkıyor ve o andan sonra erişimi
- * denetleyemiyoruz. Bu yüzden iki kip de aynı görünürlükte sunuluyor, biri
- * varsayılan seçili değil.
+ * seçimi: paket bir dosya olarak dışarı çıkıyor ve o andan sonra erişimini
+ * denetleyemiyoruz.
  */
-export function ConfigTransferPage() {
-  return (
-    <div className="mx-auto max-w-3xl px-8 py-12">
-      <p className="eyebrow">Yapılandırma</p>
-      <h1 className="mt-2 text-[28px] font-semibold tracking-tight">Dışa / içe aktarma</h1>
-      <p className="mt-2 max-w-[62ch] text-fg-dim">
-        Klasörlerinizi, sunucularınızı ve kasa kayıtlarınızı tek bir JSON dosyasına alır, başka bir
-        kuruluma taşır. Hızlı bağlantıyla oluşan geçici kayıtlar pakete girmez.
-      </p>
+export function ConfigTransferDialog({ onClose }: { onClose: () => void }) {
+  const t = useT();
 
-      <ExportPanel />
-      <ImportPanel />
-    </div>
+  return (
+    <Modal title={t('config.title')} description={t('config.description')} onClose={onClose} wide>
+      <ExportSection />
+      <div className="my-6 border-t border-line" />
+      <ImportSection />
+    </Modal>
   );
 }
 
 // ----------------------------------------------------------------- dışa aktarma
 
-function ExportPanel() {
+function ExportSection() {
+  const t = useT();
+  const apiError = useApiError();
   const exportConfig = useExportConfig();
   const [mode, setMode] = useState<ConfigSecretMode>('excluded');
   const [password, setPassword] = useState('');
@@ -59,11 +62,11 @@ function ExportPanel() {
 
     if (mode === 'encrypted') {
       if (password.length < 12) {
-        setError('Paket parolası en az 12 karakter olmalı.');
+        setError(t('config.passwordTooShort'));
         return;
       }
       if (password !== repeat) {
-        setError('Parolalar birbirini tutmuyor.');
+        setError(t('config.passwordMismatch'));
         return;
       }
     }
@@ -83,74 +86,83 @@ function ExportPanel() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `sshby-yapilandirma-${stamp}.json`;
+      link.download = `sshby-config-${stamp}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
       setPassword('');
       setRepeat('');
       setDone(
-        `${pkg.folders.length} klasör, ${pkg.hosts.length} sunucu ve ${pkg.credentials.length} kimlik bilgisi dosyaya yazıldı.`,
+        t('config.exportDone', {
+          folders: pkg.folders.length,
+          hosts: pkg.hosts.length,
+          credentials: pkg.credentials.length,
+        }),
       );
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Dışa aktarılamadı.');
+      setError(apiError(err, 'config.exportFailed'));
     }
   }
 
   return (
-    <section className="panel mt-8 p-5">
-      <h2 className="flex items-center gap-2 text-[15px] font-semibold">
-        <DownloadIcon size={15} className="text-fg-dim" aria-hidden="true" />
-        Dışa aktar
-      </h2>
+    <section>
+      <h3 className="flex items-center gap-2 text-[14px] font-semibold">
+        <DownloadIcon size={14} className="text-fg-dim" aria-hidden="true" />
+        {t('config.export')}
+      </h3>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-3 space-y-2">
         <ModeOption
           selected={mode === 'excluded'}
           onSelect={() => setMode('excluded')}
-          title="Gizli veri hariç"
-          description="Parolalar ve özel anahtarlar pakete girmez. Dosya paylaşılabilir; karşı tarafta kimlik bilgilerinin yeniden girilmesi gerekir."
+          titleKey="config.modeExcluded"
+          descriptionKey="config.modeExcludedDesc"
         />
         <ModeOption
           selected={mode === 'encrypted'}
           onSelect={() => setMode('encrypted')}
-          title="Parola korumalı şifreli paket"
-          description="Kasadaki gizli veriler de pakete girer, verdiğiniz paroladan türetilen anahtarla şifrelenir. Parolayı kaybederseniz paket açılamaz."
+          titleKey="config.modeEncrypted"
+          descriptionKey="config.modeEncryptedDesc"
         />
       </div>
 
       {mode === 'encrypted' && (
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium">Paket parolası</span>
-            <input
-              type="password"
-              className="input font-mono"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <span className="mt-1 block text-[12px] text-fg-dim">En az 12 karakter.</span>
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-[13px] font-medium">Parola tekrar</span>
-            <input
-              type="password"
-              className="input font-mono"
-              autoComplete="new-password"
-              value={repeat}
-              onChange={(e) => setRepeat(e.target.value)}
-            />
-          </label>
-        </div>
-      )}
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-medium">
+                {t('config.packagePassword')}
+              </span>
+              <input
+                type="password"
+                className="input font-mono"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <span className="mt-1 block text-[12px] text-fg-dim">
+                {t('config.packagePasswordHint')}
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-medium">
+                {t('config.passwordRepeat')}
+              </span>
+              <input
+                type="password"
+                className="input font-mono"
+                autoComplete="new-password"
+                value={repeat}
+                onChange={(e) => setRepeat(e.target.value)}
+              />
+            </label>
+          </div>
 
-      {mode === 'encrypted' && (
-        <p className="mt-4 flex items-start gap-2 rounded border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">
-          <LockIcon size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-          Bu dosya kasanızın tamamını taşır. Parolası kadar güvenlidir — dosya bir kez elden
-          çıktığında deneme sayısını sınırlayacak bir sunucu yoktur.
-        </p>
+          <p className="mt-4 flex items-start gap-2 rounded border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">
+            <LockIcon size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+            {t('config.encryptedWarning')}
+          </p>
+        </>
       )}
 
       {error && <ErrorLine message={error} />}
@@ -163,12 +175,12 @@ function ExportPanel() {
 
       <button
         type="button"
-        className="btn btn-primary mt-5"
+        className="btn btn-primary mt-4"
         onClick={() => void handleExport()}
         disabled={exportConfig.isPending}
       >
         <DownloadIcon size={14} />
-        {exportConfig.isPending ? 'Hazırlanıyor…' : 'Dosyayı indir'}
+        {exportConfig.isPending ? t('config.preparing') : t('config.download')}
       </button>
     </section>
   );
@@ -176,22 +188,28 @@ function ExportPanel() {
 
 // ------------------------------------------------------------------ içe aktarma
 
-const STRATEGY_LABELS: Record<ImportConflictStrategy, { title: string; description: string }> = {
-  rename: {
-    title: 'Yeniden adlandır',
-    description: 'Aynı adlı kayıt varsa "(2)" ekiyle yenisi oluşur; mevcut hiçbir kayıt değişmez.',
+const STRATEGIES: {
+  value: ImportConflictStrategy;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
+}[] = [
+  {
+    value: 'rename',
+    titleKey: 'config.strategyRename',
+    descriptionKey: 'config.strategyRenameDesc',
   },
-  skip: {
-    title: 'Atla',
-    description: 'Aynı adlı kayıt varsa paketteki atlanır, mevcut kayıt korunur.',
+  { value: 'skip', titleKey: 'config.strategySkip', descriptionKey: 'config.strategySkipDesc' },
+  {
+    value: 'overwrite',
+    titleKey: 'config.strategyOverwrite',
+    descriptionKey: 'config.strategyOverwriteDesc',
   },
-  overwrite: {
-    title: 'Üzerine yaz',
-    description: 'Aynı adlı kayıt paketteki değerlerle güncellenir. Mevcut gizli veri değişir.',
-  },
-};
+];
 
-function ImportPanel() {
+function ImportSection() {
+  const t = useT();
+  const { lang } = useI18n();
+  const apiError = useApiError();
   const importConfig = useImportConfig();
   const fileInput = useRef<HTMLInputElement>(null);
   const [pkg, setPkg] = useState<ConfigPackage | null>(null);
@@ -211,7 +229,7 @@ function ImportPanel() {
     try {
       raw = JSON.parse(await file.text());
     } catch {
-      setError('Dosya okunamadı; geçerli bir JSON değil.');
+      setError(t('config.invalidJson'));
       return;
     }
 
@@ -222,7 +240,7 @@ function ImportPanel() {
      */
     const parsed = configPackageSchema.safeParse(raw);
     if (!parsed.success) {
-      setError('Bu dosya bir sshby yapılandırma paketi değil ya da bozulmuş.');
+      setError(t('config.invalidPackage'));
       return;
     }
     setPkg(parsed.data);
@@ -234,7 +252,7 @@ function ImportPanel() {
     setResult(null);
 
     if (pkg.secrets === 'encrypted' && !password) {
-      setError('Bu paket şifreli; açmak için paket parolasını girin.');
+      setError(t('config.needPassword'));
       return;
     }
 
@@ -248,16 +266,16 @@ function ImportPanel() {
       );
       setPassword('');
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'İçe aktarılamadı.');
+      setError(apiError(err, 'config.importFailed'));
     }
   }
 
   return (
-    <section className="panel mt-6 p-5">
-      <h2 className="flex items-center gap-2 text-[15px] font-semibold">
-        <UploadIcon size={15} className="text-fg-dim" aria-hidden="true" />
-        İçe aktar
-      </h2>
+    <section>
+      <h3 className="flex items-center gap-2 text-[14px] font-semibold">
+        <UploadIcon size={14} className="text-fg-dim" aria-hidden="true" />
+        {t('config.import')}
+      </h3>
 
       <input
         ref={fileInput}
@@ -272,37 +290,41 @@ function ImportPanel() {
         }}
       />
 
-      <button type="button" className="btn mt-4" onClick={() => fileInput.current?.click()}>
+      <button type="button" className="btn mt-3" onClick={() => fileInput.current?.click()}>
         <FileJsonIcon size={14} />
-        {fileName ? 'Başka dosya seç' : 'Paket dosyası seç'}
+        {fileName ? t('config.pickAnotherFile') : t('config.pickFile')}
       </button>
       {fileName && <span className="ml-3 font-mono text-[12px] text-fg-dim">{fileName}</span>}
 
       {pkg && (
         <>
-          <dl className="mt-5 grid grid-cols-4 gap-3">
-            <Stat label="Klasör" value={pkg.folders.length} />
-            <Stat label="Sunucu" value={pkg.hosts.length} />
-            <Stat label="Kimlik" value={pkg.credentials.length} />
-            <Stat label="Gizli veri" value={pkg.secrets === 'encrypted' ? 'şifreli' : 'yok'} />
+          <dl className="mt-4 grid grid-cols-4 gap-3">
+            <Stat labelKey="config.statFolders" value={pkg.folders.length} />
+            <Stat labelKey="config.statHosts" value={pkg.hosts.length} />
+            <Stat labelKey="config.statCredentials" value={pkg.credentials.length} />
+            <Stat
+              labelKey="config.statSecrets"
+              value={t(pkg.secrets === 'encrypted' ? 'config.secretsEncrypted' : 'config.secretsNone')}
+            />
           </dl>
 
           <p className="mt-3 font-mono text-[11.5px] text-fg-dim">
-            {new Date(pkg.exportedAt).toLocaleString('tr-TR')}
+            {new Date(pkg.exportedAt).toLocaleString(localeTag(lang))}
             {pkg.exportedBy ? ` · ${pkg.exportedBy}` : ''}
           </p>
 
           {pkg.secrets === 'excluded' && (
             <p className="mt-4 flex items-start gap-2 rounded border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">
               <AlertTriangleIcon size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-              Bu paket gizli veri içermiyor. Kimlik bilgileri oluşturulamaz; kasanızda aynı adlı bir
-              kayıt varsa sunucular ona bağlanır, yoksa kimlik bilgisiz gelirler.
+              {t('config.excludedNotice')}
             </p>
           )}
 
           {pkg.secrets === 'encrypted' && (
             <label className="mt-4 block max-w-sm">
-              <span className="mb-1.5 block text-[13px] font-medium">Paket parolası</span>
+              <span className="mb-1.5 block text-[13px] font-medium">
+                {t('config.packagePassword')}
+              </span>
               <input
                 type="password"
                 className="input font-mono"
@@ -313,27 +335,27 @@ function ImportPanel() {
             </label>
           )}
 
-          <p className="mt-5 mb-2 text-[13px] font-medium">Aynı adlı kayıtla karşılaşılırsa</p>
+          <p className="mb-2 mt-5 text-[13px] font-medium">{t('config.conflictTitle')}</p>
           <div className="space-y-2">
-            {(Object.keys(STRATEGY_LABELS) as ImportConflictStrategy[]).map((option) => (
+            {STRATEGIES.map((option) => (
               <ModeOption
-                key={option}
-                selected={strategy === option}
-                onSelect={() => setStrategy(option)}
-                title={STRATEGY_LABELS[option].title}
-                description={STRATEGY_LABELS[option].description}
+                key={option.value}
+                selected={strategy === option.value}
+                onSelect={() => setStrategy(option.value)}
+                titleKey={option.titleKey}
+                descriptionKey={option.descriptionKey}
               />
             ))}
           </div>
 
           <button
             type="button"
-            className="btn btn-primary mt-5"
+            className="btn btn-primary mt-4"
             onClick={() => void handleImport()}
             disabled={importConfig.isPending}
           >
             <UploadIcon size={14} />
-            {importConfig.isPending ? 'Aktarılıyor…' : 'İçe aktar'}
+            {importConfig.isPending ? t('config.importing') : t('config.import')}
           </button>
         </>
       )}
@@ -345,46 +367,50 @@ function ImportPanel() {
 }
 
 function ImportReport({ result }: { result: ConfigImportResult }) {
-  const rows: [string, ImportCounts][] = [
-    ['Klasör', result.folders],
-    ['Kimlik bilgisi', result.credentials],
-    ['Sunucu', result.hosts],
+  const t = useT();
+  const rows: [TranslationKey, ImportCounts][] = [
+    ['config.rowFolders', result.folders],
+    ['config.rowCredentials', result.credentials],
+    ['config.rowHosts', result.hosts],
   ];
 
   return (
     <div className="mt-5 rounded border border-line bg-surface-2 p-4">
       <p className="flex items-center gap-2 text-[13px] font-medium text-accent">
         <CheckCircle2Icon size={14} aria-hidden="true" />
-        İçe aktarma tamamlandı
+        {t('config.importDone')}
       </p>
 
-      <table className="mt-3 w-full text-[12.5px]">
-        <thead className="text-fg-dim">
-          <tr>
-            <th className="pb-1 text-left font-normal" />
-            <th className="pb-1 text-right font-normal">eklendi</th>
-            <th className="pb-1 text-right font-normal">yeniden adlandırıldı</th>
-            <th className="pb-1 text-right font-normal">atlandı</th>
-            <th className="pb-1 text-right font-normal">üzerine yazıldı</th>
-          </tr>
-        </thead>
-        <tbody className="font-mono">
-          {rows.map(([label, counts]) => (
-            <tr key={label} className="border-t border-line">
-              <td className="py-1 font-sans">{label}</td>
-              <td className="py-1 text-right">{counts.created}</td>
-              <td className="py-1 text-right">{counts.renamed}</td>
-              <td className="py-1 text-right">{counts.skipped}</td>
-              <td className="py-1 text-right">{counts.overwritten}</td>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full text-[12.5px]">
+          <thead className="text-fg-dim">
+            <tr>
+              <th className="pb-1 text-left font-normal" />
+              <th className="pb-1 text-right font-normal">{t('config.colCreated')}</th>
+              <th className="pb-1 text-right font-normal">{t('config.colRenamed')}</th>
+              <th className="pb-1 text-right font-normal">{t('config.colSkipped')}</th>
+              <th className="pb-1 text-right font-normal">{t('config.colOverwritten')}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="font-mono">
+            {rows.map(([labelKey, counts]) => (
+              <tr key={labelKey} className="border-t border-line">
+                <td className="py-1 font-sans">{t(labelKey)}</td>
+                <td className="py-1 text-right">{counts.created}</td>
+                <td className="py-1 text-right">{counts.renamed}</td>
+                <td className="py-1 text-right">{counts.skipped}</td>
+                <td className="py-1 text-right">{counts.overwritten}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/*
         Uyarılar sessizce yutulmamalı: kullanıcı neyin eksik geldiğini görmeden
         "tamamlandı" yazısına güvenirse, bağlanamayan bir sunucuyla karşılaşana
-        kadar sorunu fark etmez.
+        kadar sorunu fark etmez. Metinleri sunucu üretiyor (kayıt adlarını
+        içeriyorlar), bu yüzden sunucunun dilinde gösteriliyorlar.
       */}
       {result.warnings.length > 0 && (
         <ul className="mt-4 space-y-1.5">
@@ -405,14 +431,15 @@ function ImportReport({ result }: { result: ConfigImportResult }) {
 function ModeOption({
   selected,
   onSelect,
-  title,
-  description,
+  titleKey,
+  descriptionKey,
 }: {
   selected: boolean;
   onSelect: () => void;
-  title: string;
-  description: string;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -422,16 +449,21 @@ function ModeOption({
         selected ? 'border-accent bg-accent-muted' : 'border-line hover:border-fg-dim/40'
       }`}
     >
-      <span className={`text-[13px] font-medium ${selected ? 'text-accent' : ''}`}>{title}</span>
-      <span className="mt-1 block text-[12.5px] leading-relaxed text-fg-dim">{description}</span>
+      <span className={`text-[13px] font-medium ${selected ? 'text-accent' : ''}`}>
+        {t(titleKey)}
+      </span>
+      <span className="mt-1 block text-[12.5px] leading-relaxed text-fg-dim">
+        {t(descriptionKey)}
+      </span>
     </button>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number | string }) {
+function Stat({ labelKey, value }: { labelKey: TranslationKey; value: number | string }) {
+  const t = useT();
   return (
     <div className="rounded border border-line bg-surface-2 px-3 py-2">
-      <dt className="text-[11.5px] uppercase tracking-wide text-fg-dim">{label}</dt>
+      <dt className="text-[11.5px] uppercase tracking-wide text-fg-dim">{t(labelKey)}</dt>
       <dd className="mt-0.5 font-mono text-[15px]">{value}</dd>
     </div>
   );

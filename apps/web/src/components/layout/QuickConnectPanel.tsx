@@ -11,11 +11,18 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { Host, QuickConnectRequest } from '@sshby/shared';
-import { ApiRequestError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { useApiError, useT, type TranslationKey } from '@/lib/i18n';
 import { useCredentials } from '@/lib/queries';
 import { useTerminalStore } from '@/lib/terminal-store';
 
 type AuthMode = 'password' | 'key' | 'credential';
+
+const AUTH_MODES: { value: AuthMode; labelKey: TranslationKey }[] = [
+  { value: 'password', labelKey: 'quick.authPassword' },
+  { value: 'key', labelKey: 'quick.authKey' },
+  { value: 'credential', labelKey: 'quick.authVault' },
+];
 
 /**
  * Hızlı bağlantı — envantere kaydetmeden tek seferlik erişim.
@@ -25,6 +32,8 @@ type AuthMode = 'password' | 'key' | 'credential';
  * çalışıyor. Kayıt 24 saat kullanılmazsa siliniyor.
  */
 export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  const apiError = useApiError();
   const credentials = useCredentials();
   const openTab = useTerminalStore((s) => s.openTab);
   const openFileTab = useTerminalStore((s) => s.openFileTab);
@@ -45,30 +54,30 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
   function buildRequest(): QuickConnectRequest | null {
     const base = { hostname: hostname.trim(), port: Number(port) || 22, username: username.trim() };
     if (!base.hostname) {
-      setError('Ana bilgisayar adresi gerekli.');
+      setError(t('quick.hostRequired'));
       return null;
     }
     if (!base.username) {
-      setError('Kullanıcı adı gerekli.');
+      setError(t('quick.usernameRequired'));
       return null;
     }
 
     if (auth === 'password') {
       if (!password) {
-        setError('Parola gerekli.');
+        setError(t('quick.passwordRequired'));
         return null;
       }
       return { ...base, auth: 'password', password };
     }
     if (auth === 'key') {
       if (!privateKey.trim()) {
-        setError('Özel anahtar gerekli.');
+        setError(t('quick.keyRequired'));
         return null;
       }
       return { ...base, auth: 'key', privateKey, passphrase: passphrase || undefined };
     }
     if (!credentialId) {
-      setError('Kasadan bir kayıt seçin.');
+      setError(t('quick.credentialRequired'));
       return null;
     }
     return { ...base, auth: 'credential', credentialId };
@@ -95,7 +104,7 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
       setPrivateKey('');
       setPassphrase('');
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Bağlantı oluşturulamadı.');
+      setError(apiError(err, 'quick.failed'));
     } finally {
       setBusy(false);
     }
@@ -110,29 +119,29 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
     <aside className="flex w-[300px] shrink-0 flex-col border-r border-line bg-surface">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3.5">
         <ZapIcon size={15} className="shrink-0 text-accent" aria-hidden="true" />
-        <h2 className="flex-1 text-[15px] font-semibold tracking-tight">Hızlı bağlantı</h2>
+        <h2 className="flex-1 text-[15px] font-semibold tracking-tight">{t('quick.title')}</h2>
         <button
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={onClose}
-          aria-label="Hızlı bağlantı panelini kapat"
+          aria-label={t('quick.closePanel')}
         >
           <ChevronLeftIcon size={15} />
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 py-3">
-        <Field label="Ana bilgisayar">
+        <Field label={t('quick.host')}>
           <input
             className="input font-mono text-[12.5px]"
-            placeholder="192.168.1.1 veya example.com"
+            placeholder={t('quick.hostPlaceholder')}
             value={hostname}
             onChange={(e) => setHostname(e.target.value)}
             autoFocus
           />
         </Field>
 
-        <Field label="Bağlantı noktası">
+        <Field label={t('quick.port')}>
           <input
             className="input font-mono text-[12.5px]"
             inputMode="numeric"
@@ -141,7 +150,7 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
           />
         </Field>
 
-        <Field label="Kullanıcı adı">
+        <Field label={t('quick.username')}>
           <input
             className="input font-mono text-[12.5px]"
             value={username}
@@ -150,41 +159,35 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
         </Field>
 
         <div>
-          <span className="eyebrow mb-1.5 block">Kimlik doğrulama</span>
+          <span className="eyebrow mb-1.5 block">{t('quick.auth')}</span>
           <div className="flex gap-1">
-            {(
-              [
-                ['password', 'Parola'],
-                ['key', 'Anahtar'],
-                ['credential', 'Kasa'],
-              ] as const
-            ).map(([mode, label]) => (
+            {AUTH_MODES.map((mode) => (
               <button
-                key={mode}
+                key={mode.value}
                 type="button"
                 className={clsx(
                   'flex-1 rounded border px-2 py-1.5 font-mono text-[11px] transition-colors',
-                  auth === mode
+                  auth === mode.value
                     ? 'border-accent text-accent'
                     : 'border-line text-fg-dim hover:border-fg-dim hover:text-fg',
                 )}
-                onClick={() => setAuth(mode)}
-                aria-pressed={auth === mode}
+                onClick={() => setAuth(mode.value)}
+                aria-pressed={auth === mode.value}
               >
-                {label}
+                {t(mode.labelKey)}
               </button>
             ))}
           </div>
         </div>
 
         {auth === 'password' && (
-          <Field label="Parola">
+          <Field label={t('quick.authPassword')}>
             <div className="relative">
               <input
                 type={showSecret ? 'text' : 'password'}
                 className="input pr-9 font-mono text-[12.5px]"
                 autoComplete="off"
-                placeholder="parola"
+                placeholder={t('quick.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -192,7 +195,7 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
                 type="button"
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-fg-dim hover:text-fg"
                 onClick={() => setShowSecret((v) => !v)}
-                aria-label={showSecret ? 'Parolayı gizle' : 'Parolayı göster'}
+                aria-label={showSecret ? t('quick.hideSecret') : t('quick.showSecret')}
               >
                 {showSecret ? <EyeOffIcon size={13} /> : <EyeIcon size={13} />}
               </button>
@@ -202,7 +205,7 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
 
         {auth === 'key' && (
           <>
-            <Field label="Özel anahtar">
+            <Field label={t('vault.privateKey')}>
               <textarea
                 className="input h-28 resize-y font-mono text-[11px]"
                 placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
@@ -211,12 +214,12 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
                 spellCheck={false}
               />
             </Field>
-            <Field label="Anahtar parolası">
+            <Field label={t('vault.passphrase')}>
               <input
                 type="password"
                 className="input font-mono text-[12.5px]"
                 autoComplete="off"
-                placeholder="anahtar korumalıysa"
+                placeholder={t('vault.passphrasePlaceholder')}
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
               />
@@ -225,16 +228,17 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {auth === 'credential' && (
-          <Field label="Kasadaki kayıt">
+          <Field label={t('quick.vaultEntry')}>
             <select
               className="input text-[12.5px]"
               value={credentialId}
               onChange={(e) => setCredentialId(e.target.value)}
             >
-              <option value="">— seçin —</option>
+              <option value="">{t('quick.selectPlaceholder')}</option>
               {credentials.data?.map((cred) => (
                 <option key={cred.id} value={cred.id}>
-                  {cred.name} ({cred.type === 'password' ? 'parola' : 'anahtar'})
+                  {cred.name} (
+                  {cred.type === 'password' ? t('vault.typePassword') : t('vault.typeKey')})
                 </option>
               ))}
             </select>
@@ -258,7 +262,7 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
             disabled={busy}
           >
             <TerminalIcon size={13} />
-            Terminale bağlan
+            {t('quick.connectTerminal')}
           </button>
           <button
             type="button"
@@ -267,14 +271,11 @@ export function QuickConnectPanel({ onClose }: { onClose: () => void }) {
             disabled={busy}
           >
             <FolderOpenIcon size={13} />
-            Dosyalara bağlan
+            {t('quick.connectFiles')}
           </button>
         </div>
 
-        <p className="pt-1 text-[11px] leading-relaxed text-fg-dim">
-          Bu bağlantı envantere eklenmez. Girdiğiniz gizli veri kasadakiyle aynı şifrelemeyle
-          geçici olarak saklanır ve 24 saat kullanılmazsa silinir.
-        </p>
+        <p className="pt-1 text-[11px] leading-relaxed text-fg-dim">{t('quick.notice')}</p>
       </form>
     </aside>
   );

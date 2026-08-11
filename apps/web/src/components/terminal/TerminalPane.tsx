@@ -9,6 +9,7 @@ import {
   type ServerTerminalMessage,
 } from '@sshby/shared';
 import { apiFetch, ApiRequestError } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { useTerminalStore } from '@/lib/terminal-store';
 import { AuthPromptDialog } from './AuthPromptDialog';
 import { HostKeyDialog } from './HostKeyDialog';
@@ -53,6 +54,7 @@ export function TerminalPane({
   /** Görünmeyen sekmeler DOM'da kalır (oturum yaşasın) ama ölçülemez. */
   visible: boolean;
 }) {
+  const t = useT();
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<(() => void) | null>(null);
@@ -80,8 +82,8 @@ export function TerminalPane({
       if (result.text) term.paste(result.text);
       return;
     }
-    setNotice(result.reason);
-  }, []);
+    setNotice(t(result.reasonKey));
+  }, [t]);
 
   /** Seçili metni panoya kopyalar. */
   const copy = useCallback(async () => {
@@ -90,8 +92,8 @@ export function TerminalPane({
     if (!text) return;
     const result = await copyText(text);
     term?.focus();
-    if (!result.ok) setNotice(result.reason);
-  }, []);
+    if (!result.ok) setNotice(t(result.reasonKey));
+  }, [t]);
 
   /**
    * Tuş işleyicisi bir kez kurulup ömür boyu yaşıyor; güncel kopyala/yapıştır
@@ -100,10 +102,17 @@ export function TerminalPane({
    */
   const copyRef = useRef(copy);
   const pasteRef = useRef(paste);
+  /**
+   * Çeviri işlevi de aynı nedenle ref'te tutuluyor: dil değiştiğinde `t` yeni
+   * bir referans alıyor ve kurulum efektinin bağımlılığı olsaydı dil seçmek
+   * açık SSH oturumlarını koparırdı.
+   */
+  const tRef = useRef(t);
   useEffect(() => {
     copyRef.current = copy;
     pasteRef.current = paste;
-  }, [copy, paste]);
+    tRef.current = t;
+  }, [copy, paste, t]);
 
   /**
    * Kurulum yalnızca bir kez çalışır. `tabId` sabit olduğu için bağımlılık
@@ -226,7 +235,7 @@ export function TerminalPane({
         ticket = res.ticket;
       } catch (err) {
         const message =
-          err instanceof ApiRequestError ? err.message : 'Bağlantı bileti alınamadı.';
+          err instanceof ApiRequestError ? err.message : tRef.current('terminal.ticketFailed');
         writeNotice(message, '31');
         patchTab(tabId, { state: 'error', error: message });
         return;
@@ -262,7 +271,7 @@ export function TerminalPane({
             }
             if (message.state === 'closed') {
               patchTab(tabId, { state: 'closed' });
-              writeNotice(message.message ?? 'Oturum kapandı.');
+              writeNotice(message.message ?? tRef.current('terminal.sessionClosed'));
             }
             break;
 
@@ -290,11 +299,11 @@ export function TerminalPane({
 
       socket.onclose = () => {
         patchTab(tabId, { state: 'closed' });
-        writeNotice('Bağlantı kapandı.');
+        writeNotice(tRef.current('terminal.connectionClosed'));
       };
 
       socket.onerror = () => {
-        patchTab(tabId, { state: 'error', error: 'WebSocket bağlantısı kurulamadı.' });
+        patchTab(tabId, { state: 'error', error: tRef.current('terminal.wsFailed') });
       };
     }
 

@@ -1,5 +1,6 @@
 import { ShieldAlertIcon, ShieldQuestionIcon } from 'lucide-react';
 import type { ServerTerminalMessage } from '@sshby/shared';
+import { useT } from '@/lib/i18n';
 
 type Prompt = Extract<ServerTerminalMessage, { type: 'hostkey_prompt' }>;
 
@@ -19,6 +20,7 @@ export function HostKeyDialog({
   onAccept: () => void;
   onReject: () => void;
 }) {
+  const t = useT();
   const changed = prompt.knownFingerprint !== null;
 
   return (
@@ -26,7 +28,7 @@ export function HostKeyDialog({
       <div
         role="alertdialog"
         aria-modal="true"
-        aria-label={changed ? 'Sunucu anahtarı değişti' : 'Sunucu anahtarını doğrulayın'}
+        aria-label={changed ? t('hostkey.changedAria') : t('hostkey.firstAria')}
         className={`w-full max-w-lg rounded-panel border bg-surface shadow-2xl shadow-black/50 ${
           changed ? 'border-danger/60' : 'border-line'
         }`}
@@ -39,7 +41,7 @@ export function HostKeyDialog({
           )}
           <div>
             <h2 className={`text-[15px] font-semibold ${changed ? 'text-danger' : ''}`}>
-              {changed ? 'Sunucu anahtarı DEĞİŞTİ' : 'Sunucu ilk kez görülüyor'}
+              {changed ? t('hostkey.changedTitle') : t('hostkey.firstTitle')}
             </h2>
             <p className="mt-0.5 font-mono text-[12.5px] text-fg-dim">{prompt.hostLabel}</p>
           </div>
@@ -47,20 +49,13 @@ export function HostKeyDialog({
 
         <div className="space-y-4 px-5 py-5">
           {changed ? (
-            <p className="text-[13px] leading-relaxed">
-              Bu sunucu daha önce farklı bir anahtarla tanınmıştı. Sunucu yeniden kurulmuş ya da
-              anahtarı değiştirilmiş olabilir — ancak bu, araya giren bir saldırganın (MITM)
-              işareti de olabilir. <strong className="font-medium">Nedenini bilmiyorsanız
-              bağlanmayın</strong> ve sistem yöneticinize danışın.
-            </p>
+            <p className="text-[13px] leading-relaxed">{t('hostkey.changedBody')}</p>
           ) : (
             <p className="text-[13px] leading-relaxed">
-              Bu sunucuya ilk kez bağlanıyorsunuz. Aşağıdaki parmak izinin sunucunun gerçek
-              anahtarıyla eşleştiğini doğrulayın. Sunucuda{' '}
+              {t('hostkey.firstBody')}{' '}
               <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[11.5px]">
                 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
-              </code>{' '}
-              komutuyla kontrol edebilirsiniz.
+              </code>
             </p>
           )}
 
@@ -68,7 +63,7 @@ export function HostKeyDialog({
             {changed && (
               <div>
                 <dt className="text-[11px] uppercase tracking-wider text-fg-dim">
-                  Daha önce kabul edilen
+                  {t('hostkey.previouslyAccepted')}
                 </dt>
                 <dd className="mt-0.5 break-all text-fg-dim line-through">
                   {prompt.knownFingerprint}
@@ -77,7 +72,7 @@ export function HostKeyDialog({
             )}
             <div>
               <dt className="text-[11px] uppercase tracking-wider text-fg-dim">
-                {changed ? 'Şimdi sunulan' : 'Parmak izi'} · {prompt.algorithm}
+                {changed ? t('hostkey.nowOffered') : t('hostkey.fingerprint')} · {prompt.algorithm}
               </dt>
               <dd className={`mt-0.5 break-all ${changed ? 'text-danger' : 'text-fg'}`}>
                 {prompt.fingerprint}
@@ -88,14 +83,14 @@ export function HostKeyDialog({
 
         <div className="flex justify-end gap-2 border-t border-line px-5 py-3.5">
           <button type="button" className="btn" onClick={onReject}>
-            Bağlanma
+            {t('hostkey.reject')}
           </button>
           <button
             type="button"
             className={changed ? 'btn border-danger/50 text-danger hover:bg-danger/10' : 'btn btn-primary'}
             onClick={onAccept}
           >
-            {changed ? 'Riski kabul ediyorum, bağlan' : 'Güven ve bağlan'}
+            {changed ? t('hostkey.acceptRisk') : t('hostkey.trust')}
           </button>
         </div>
       </div>

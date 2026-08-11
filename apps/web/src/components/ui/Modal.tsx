@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { XIcon } from 'lucide-react';
+import { useT } from '@/lib/i18n';
 
 /**
  * Basit modal. `<dialog>` yerine elle kurulmuş: Firefox'ta `<dialog>`
@@ -21,6 +22,7 @@ export function Modal({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const t = useT();
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,7 +59,12 @@ export function Modal({
             <h2 className="text-[15px] font-semibold">{title}</h2>
             {description && <p className="mt-0.5 text-[12.5px] text-fg-dim">{description}</p>}
           </div>
-          <button type="button" className="btn-ghost rounded p-1" onClick={onClose} aria-label="Kapat">
+          <button
+            type="button"
+            className="btn-ghost rounded p-1"
+            onClick={onClose}
+            aria-label={t('common.close')}
+          >
             <XIcon size={16} />
           </button>
         </div>

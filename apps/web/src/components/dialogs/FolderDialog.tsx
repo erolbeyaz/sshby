@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { Folder } from '@sshby/shared';
 import { Modal } from '@/components/ui/Modal';
-import { ApiRequestError } from '@/lib/api';
+import { useApiError, useT } from '@/lib/i18n';
 import { useCreateFolder, useUpdateFolder } from '@/lib/queries';
 
 /** Klasör renkleri paletle sınırlı: serbest renk seçici koyu temayı bozuyor. */
@@ -17,6 +17,8 @@ export function FolderDialog({
   parentId: string | null;
   onClose: () => void;
 }) {
+  const t = useT();
+  const apiError = useApiError();
   const createFolder = useCreateFolder();
   const updateFolder = useUpdateFolder();
 
@@ -31,7 +33,7 @@ export function FolderDialog({
     setError(null);
 
     if (name.trim().length === 0) {
-      setError('Klasör adı boş olamaz.');
+      setError(t('folder.nameRequired'));
       return;
     }
 
@@ -40,45 +42,45 @@ export function FolderDialog({
       else await createFolder.mutateAsync({ name: name.trim(), parentId, color });
       onClose();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Beklenmeyen bir hata oluştu.');
+      setError(apiError(err));
     }
   }
 
   return (
     <Modal
-      title={folder ? 'Klasörü düzenle' : 'Klasör ekle'}
+      title={folder ? t('folder.editTitle') : t('folder.addTitle')}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose} disabled={busy}>
-            Vazgeç
+            {t('common.cancel')}
           </button>
           <button type="submit" form="folder-form" className="btn btn-primary" disabled={busy}>
-            {folder ? 'Kaydet' : 'Ekle'}
+            {folder ? t('common.save') : t('common.add')}
           </button>
         </>
       }
     >
       <form id="folder-form" onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-medium">Ad</span>
+          <span className="mb-1.5 block text-[13px] font-medium">{t('common.name')}</span>
           <input
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Üretim"
+            placeholder={t('folder.namePlaceholder')}
           />
         </label>
 
         <div>
-          <span className="mb-2 block text-[13px] font-medium">Renk</span>
+          <span className="mb-2 block text-[13px] font-medium">{t('folder.color')}</span>
           <div className="flex gap-2">
             <button
               type="button"
               className={`h-7 w-7 rounded border ${color === null ? 'border-fg' : 'border-line'}`}
               onClick={() => setColor(null)}
-              aria-label="Renksiz"
-              title="Renksiz"
+              aria-label={t('folder.noColor')}
+              title={t('folder.noColor')}
             />
             {COLORS.map((c) => (
               <button
@@ -87,7 +89,7 @@ export function FolderDialog({
                 className={`h-7 w-7 rounded border-2 ${color === c ? 'border-fg' : 'border-transparent'}`}
                 style={{ backgroundColor: c }}
                 onClick={() => setColor(c)}
-                aria-label={`Renk ${c}`}
+                aria-label={t('folder.colorAria', { color: c })}
               />
             ))}
           </div>

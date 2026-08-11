@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import clsx from 'clsx';
+import { useT } from '@/lib/i18n';
 
 /**
  * Kenar çubuğunun genişliğini ayarlayan sürükleme çizgisi.
@@ -18,13 +19,14 @@ export function SidebarResizer({
   max?: number;
   onChange: (width: number) => void;
 }) {
+  const t = useT();
   const dragging = useRef(false);
 
   return (
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Sunucular çubuğunun genişliğini ayarla"
+      aria-label={t('sidebar.resizeAria')}
       aria-valuenow={width}
       aria-valuemin={min}
       aria-valuemax={max}
@@ -58,7 +60,7 @@ export function SidebarResizer({
         event.preventDefault();
       }}
       onDoubleClick={() => onChange(250)}
-      title="Sürükleyerek genişliği ayarlayın · çift tıkla sıfırla"
+      title={t('sidebar.resizeTitle')}
     />
   );
 }

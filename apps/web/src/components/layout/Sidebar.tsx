@@ -6,6 +6,7 @@ import { FolderDialog } from '@/components/dialogs/FolderDialog';
 import { HostDialog } from '@/components/dialogs/HostDialog';
 import { InventoryTree } from '@/components/tree/InventoryTree';
 import { Modal } from '@/components/ui/Modal';
+import { useT } from '@/lib/i18n';
 import {
   useCloneHost,
   useDeleteFolder,
@@ -25,6 +26,7 @@ type Dialog =
   | null;
 
 export function Sidebar() {
+  const t = useT();
   const inventory = useInventory();
   const moveNode = useMoveNode();
   const deleteHost = useDeleteHost();
@@ -66,13 +68,13 @@ export function Sidebar() {
       style={{ width }}
     >
       <div className="flex items-center gap-1 px-2 pb-1 pt-2">
-        <span className="eyebrow flex-1 pl-1.5">Sunucular</span>
+        <span className="eyebrow flex-1 pl-1.5">{t('sidebar.servers')}</span>
         <button
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={() => setDialog({ kind: 'folder', folder: null })}
-          aria-label="Klasör ekle"
-          title="Klasör ekle"
+          aria-label={t('sidebar.addFolder')}
+          title={t('sidebar.addFolder')}
         >
           <FolderPlusIcon size={14} />
         </button>
@@ -80,8 +82,8 @@ export function Sidebar() {
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={() => setDialog({ kind: 'host', host: null })}
-          aria-label="Sunucu ekle"
-          title="Sunucu ekle"
+          aria-label={t('sidebar.addHost')}
+          title={t('sidebar.addHost')}
         >
           <ServerIcon size={14} />
         </button>
@@ -97,15 +99,15 @@ export function Sidebar() {
           className="input py-1.5 pl-7 pr-7 font-mono text-[12px]"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="filtrele…"
-          aria-label="Sunucularda filtrele"
+          placeholder={t('sidebar.filter')}
+          aria-label={t('sidebar.filterAria')}
         />
         {filter && (
           <button
             type="button"
             className="absolute right-4 top-1/2 -translate-y-1/2 text-fg-dim hover:text-fg"
             onClick={() => setFilter('')}
-            aria-label="Filtreyi temizle"
+            aria-label={t('sidebar.clearFilter')}
           >
             <XIcon size={13} />
           </button>
@@ -119,7 +121,7 @@ export function Sidebar() {
         selectedHostId={selectedHostId}
         onSelectHost={(host) => {
           setSelectedHostId(host.id);
-          navigate(`/sunucu/${host.id}`);
+          navigate(`/server/${host.id}`);
         }}
         onConnectHost={(host) => {
           setSelectedHostId(host.id);
@@ -150,7 +152,7 @@ export function Sidebar() {
       />
 
       <div className="border-t border-line px-3 py-2 font-mono text-[11.5px] text-fg-dim">
-        {hosts.length} sunucu · {folders.length} klasör
+        {t('sidebar.summary', { hosts: hosts.length, folders: folders.length })}
       </div>
 
       {dialog?.kind === 'host' && (
@@ -168,11 +170,11 @@ export function Sidebar() {
 
       {dialog?.kind === 'delete-host' && (
         <ConfirmDelete
-          title="Sunucuyu sil"
+          title={t('sidebar.deleteHostTitle')}
           body={
             <>
-              <strong className="font-medium">{dialog.host.name}</strong> kaydı silinecek. Sunucunun
-              kendisine dokunulmaz, yalnızca buradaki tanım kaldırılır.
+              <strong className="font-medium">{dialog.host.name}</strong>{' '}
+              {t('sidebar.deleteHostBody')}
             </>
           }
           busy={deleteHost.isPending}
@@ -187,11 +189,11 @@ export function Sidebar() {
 
       {dialog?.kind === 'delete-folder' && (
         <ConfirmDelete
-          title="Klasörü sil"
+          title={t('sidebar.deleteFolderTitle')}
           body={
             <>
-              <strong className="font-medium">{dialog.folder.name}</strong> ve alt klasörleri
-              silinecek. İçindeki sunucu kayıtları silinmez, kök seviyeye taşınır.
+              <strong className="font-medium">{dialog.folder.name}</strong>{' '}
+              {t('sidebar.deleteFolderBody')}
             </>
           }
           busy={deleteFolder.isPending}
@@ -222,6 +224,7 @@ function ConfirmDelete({
   onConfirm: () => Promise<void>;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Modal
       title={title}
@@ -229,7 +232,7 @@ function ConfirmDelete({
       footer={
         <>
           <button type="button" className="btn" onClick={onClose} disabled={busy}>
-            Vazgeç
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -237,7 +240,7 @@ function ConfirmDelete({
             onClick={() => void onConfirm()}
             disabled={busy}
           >
-            Sil
+            {t('common.delete')}
           </button>
         </>
       }

@@ -23,6 +23,7 @@ import clsx from 'clsx';
 import type { SftpEntry } from '@sshby/shared';
 import { Modal } from '@/components/ui/Modal';
 import { ApiRequestError } from '@/lib/api';
+import { localeTag, useApiError, useI18n, useT, type TranslationKey } from '@/lib/i18n';
 import {
   disableSudo,
   downloadFile,
@@ -51,9 +52,9 @@ function formatSize(bytes: number): string {
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
 }
 
-function formatDate(seconds: number): string {
+function formatDate(seconds: number, locale: string): string {
   if (!seconds) return '—';
-  return new Date(seconds * 1000).toLocaleString('tr-TR', {
+  return new Date(seconds * 1000).toLocaleString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -94,6 +95,8 @@ export function FileManager({
   hostName: string;
   onClose: () => void;
 }) {
+  const { lang, t } = useI18n();
+  const apiError = useApiError();
   const [path, setPath] = useState<string | null>(null);
   const [sudo, setSudo] = useState(false);
   const [sudoPrompt, setSudoPrompt] = useState<{ error: string | null; busy: boolean } | null>(
@@ -160,7 +163,7 @@ export function FileManager({
       void queryClient.invalidateQueries({ queryKey: ['sftp', hostId] });
     } catch (err) {
       setSudoPrompt({
-        error: err instanceof ApiRequestError ? err.message : 'Parola doğrulanamadı.',
+        error: apiError(err, 'files.passwordFailed'),
         busy: false,
       });
     }
@@ -182,7 +185,7 @@ export function FileManager({
           sudo,
         );
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Yükleme başarısız.');
+        setError(err instanceof Error ? err.message : t('files.uploadFailed'));
         break;
       }
     }
@@ -195,7 +198,7 @@ export function FileManager({
     try {
       await downloadFile(hostId, entry.path, entry.name, sudo);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'İndirme başarısız.');
+      setError(err instanceof Error ? err.message : t('files.downloadFailed'));
     }
   }
 
@@ -237,7 +240,7 @@ export function FileManager({
       <div className="flex shrink-0 items-center gap-1 border-b border-line bg-surface px-2 py-1.5">
         <ToolButton
           icon={<ArrowLeftIcon size={13} />}
-          label="Geri"
+          label={t('files.back')}
           disabled={historyIndex === 0}
           onClick={() => {
             const i = historyIndex - 1;
@@ -247,7 +250,7 @@ export function FileManager({
         />
         <ToolButton
           icon={<ArrowRightIcon size={13} />}
-          label="İleri"
+          label={t('files.forward')}
           disabled={historyIndex >= history.length - 1}
           onClick={() => {
             const i = historyIndex + 1;
@@ -257,13 +260,13 @@ export function FileManager({
         />
         <ToolButton
           icon={<ArrowUpIcon size={13} />}
-          label="Üst dizin"
+          label={t('files.up')}
           disabled={!listing.data?.parent}
           onClick={() => navigate(listing.data?.parent ?? null)}
         />
         <ToolButton
           icon={<RefreshCwIcon size={13} className={clsx(listing.isFetching && 'animate-spin')} />}
-          label="Yenile"
+          label={t('history.refresh')}
           onClick={() => void listing.refetch()}
         />
 
@@ -323,7 +326,7 @@ export function FileManager({
               setSudoPrompt({ error: null, busy: false });
             }
           }}
-          title={sudo ? 'Sudo modu açık — kapatmak için tıklayın' : 'Sudo moduna geç'}
+          title={sudo ? t('files.sudoOn') : t('files.sudoOff')}
         >
           <ShieldIcon size={12} />
           sudo
@@ -345,7 +348,7 @@ export function FileManager({
           <PlusIcon size={12} />
           Yeni
         </button>
-        <ToolButton icon={<XIcon size={14} />} label="Paneli kapat" onClick={onClose} />
+        <ToolButton icon={<XIcon size={14} />} label={t('files.closePanel')} onClick={onClose} />
       </div>
 
       <input
@@ -389,7 +392,7 @@ export function FileManager({
       {/* ---------------------------------------------- ağaç + dosya tablosu */}
       <div className="flex min-h-0 flex-1">
         <div className="flex w-[210px] shrink-0 flex-col border-r border-line bg-surface">
-          <p className="eyebrow px-3 py-2">Dizinler</p>
+          <p className="eyebrow px-3 py-2">{t('files.directories')}</p>
           <DirectoryTree
             hostId={hostId}
             sudo={sudo}
@@ -409,9 +412,9 @@ export function FileManager({
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex shrink-0 items-center gap-3 border-b border-line px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-dim">
             <span className="min-w-0 flex-1">Ad</span>
-            <span className="w-[150px] shrink-0">Değiştirilme</span>
+            <span className="w-[150px] shrink-0">{t('files.colModified')}</span>
             <span className="w-[70px] shrink-0 text-right">Boyut</span>
-            <span className="w-[95px] shrink-0">İzinler</span>
+            <span className="w-[95px] shrink-0">{t('files.colPermissions')}</span>
             <span className="w-[76px] shrink-0" />
           </div>
 
@@ -426,9 +429,7 @@ export function FileManager({
             {listing.isError && !sudoPrompt && (
               <div className="px-3 py-6 text-center">
                 <p className="text-[12.5px] text-danger">
-                  {listing.error instanceof ApiRequestError
-                    ? listing.error.message
-                    : 'Dizin okunamadı.'}
+                  {apiError(listing.error, 'files.readFailed')}
                 </p>
                 {!sudo && (
                   <button
@@ -445,7 +446,7 @@ export function FileManager({
 
             {listing.data && entries.length === 0 && (
               <p className="px-3 py-6 text-center text-[12.5px] text-fg-dim">
-                {filter ? 'Eşleşen dosya yok.' : 'Bu dizin boş.'}
+                {filter ? t('files.noMatch') : t('files.empty')}
               </p>
             )}
 
@@ -477,7 +478,7 @@ export function FileManager({
                   </button>
 
                   <span className="w-[150px] shrink-0 font-mono text-[11px] text-fg-dim">
-                    {formatDate(entry.modifiedAt)}
+                    {formatDate(entry.modifiedAt, localeTag(lang))}
                   </span>
                   <span className="w-[70px] shrink-0 text-right font-mono text-[11px] text-fg-dim">
                     {dir ? '—' : formatSize(entry.size)}
@@ -598,6 +599,8 @@ function EntryDialog({
   onClose: () => void;
   onError: (message: string) => void;
 }) {
+  const t = useT();
+  const apiError = useApiError();
   const mkdir = useMkdir(hostId, sudo);
   const rename = useRename(hostId, sudo);
   const chmod = useChmod(hostId, sudo);
@@ -630,26 +633,26 @@ function EntryDialog({
       }
       onClose();
     } catch (err) {
-      onError(err instanceof ApiRequestError ? err.message : 'İşlem başarısız.');
+      onError(apiError(err, 'files.actionFailed'));
       onClose();
     }
   }
 
-  const titles = {
-    mkdir: 'Yeni klasör',
-    rename: 'Yeniden adlandır',
-    chmod: 'İzinleri değiştir',
-    delete: 'Sil',
-  } as const;
+  const titleKeys = {
+    mkdir: 'files.mkdir',
+    rename: 'files.rename',
+    chmod: 'files.chmod',
+    delete: 'files.delete',
+  } as const satisfies Record<string, TranslationKey>;
 
   return (
     <Modal
-      title={titles[dialog.kind]}
+      title={t(titleKeys[dialog.kind])}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose} disabled={busy}>
-            Vazgeç
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -662,7 +665,7 @@ function EntryDialog({
             onClick={() => void run()}
             disabled={busy}
           >
-            {dialog.kind === 'delete' ? 'Sil' : 'Tamam'}
+            {dialog.kind === 'delete' ? t('files.delete') : t('files.ok')}
           </button>
         </>
       }
@@ -675,7 +678,7 @@ function EntryDialog({
       ) : (
         <label className="block">
           <span className="mb-1.5 block text-[13px] font-medium">
-            {dialog.kind === 'chmod' ? 'Sekizlik izin (örn. 644)' : 'Ad'}
+            {dialog.kind === 'chmod' ? t('files.octalLabel') : t('common.name')}
           </span>
           <input
             autoFocus

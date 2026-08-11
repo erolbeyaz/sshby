@@ -9,7 +9,9 @@ import {
   ShieldAlertIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { ApiRequestError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { useApiError, useT } from '@/lib/i18n';
+import { useDocumentTitle } from '@/lib/use-document-title';
 
 /**
  * Elasticsearch denetim ayarları (yalnızca admin).
@@ -44,7 +46,12 @@ interface ShipperStatus {
 }
 
 export function AdminAuditPage() {
+  const t = useT();
+  const apiError = useApiError();
   const queryClient = useQueryClient();
+
+  useDocumentTitle('Audit');
+
   const settings = useQuery({
     queryKey: ['settings', 'elasticsearch'],
     queryFn: () => apiFetch<EsSettings>('/settings/elasticsearch'),
@@ -80,7 +87,7 @@ export function AdminAuditPage() {
       void queryClient.invalidateQueries({ queryKey: ['settings', 'elasticsearch'] });
     },
     onError: (err) => {
-      setSaveError(err instanceof ApiRequestError ? err.message : 'Kaydedilemedi.');
+      setSaveError(apiError(err, 'audit.saveFailed'));
     },
   });
 
@@ -94,7 +101,7 @@ export function AdminAuditPage() {
     onError: (err) =>
       setTestResult({
         ok: false,
-        message: err instanceof ApiRequestError ? err.message : 'Test başarısız.',
+        message: apiError(err, 'audit.testFailed'),
       }),
   });
 
@@ -110,7 +117,7 @@ export function AdminAuditPage() {
     return (
       <p className="flex items-center gap-2 px-8 py-12 font-mono text-[13px] text-fg-dim">
         <LoaderIcon size={14} className="animate-spin" aria-hidden="true" />
-        yükleniyor…
+        {t('common.loading')}
       </p>
     );
   }
@@ -132,12 +139,10 @@ export function AdminAuditPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-12">
-      <p className="eyebrow">Yönetim</p>
-      <h1 className="mt-2 text-[28px] font-semibold tracking-tight">Denetim akışı</h1>
+      <p className="eyebrow">{t('admin.eyebrow')}</p>
+      <h1 className="mt-2 text-[28px] font-semibold tracking-tight">{t('audit.title')}</h1>
       <p className="mt-2 max-w-[60ch] text-fg-dim">
-        Denetim olayları her zaman veritabanındaki kuyruğa yazılır. Burada açtığınızda
-        arka plandaki gönderici bunları Elasticsearch'e taşır — kapalıyken de hiçbir
-        olay kaybolmaz, kuyrukta bekler.
+        {t('audit.intro')}
       </p>
 
       {/* ------------------------------------------------------------ durum */}
@@ -158,10 +163,10 @@ export function AdminAuditPage() {
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-medium">
             {!form.enabled
-              ? 'Elasticsearch kapalı'
+              ? t('audit.esOff')
               : status.data?.ok
-                ? 'Gönderici çalışıyor'
-                : 'Gönderim başarısız'}
+                ? t('audit.shipperRunning')
+                : t('audit.shipperFailing')}
           </p>
           <p className="truncate font-mono text-[11.5px] text-fg-dim">
             {status.data?.message ?? '—'}
@@ -184,14 +189,14 @@ export function AdminAuditPage() {
             onChange={(e) => update({ enabled: e.target.checked })}
           />
           <span className="text-[13px]">
-            <span className="font-medium">Elasticsearch'e gönderimi etkinleştir</span>
+            <span className="font-medium">{t('audit.enable')}</span>
             <span className="mt-0.5 block text-fg-dim">
-              Kapalıyken olaylar kuyrukta birikir; açtığınızda geçmiş kayıtlar da akar.
+              {t('audit.enableHint')}
             </span>
           </span>
         </label>
 
-        <Field label="Düğüm adresleri" hint="Her satıra bir adres">
+        <Field label={t('audit.nodes')} hint={t('audit.nodesHint')}>
           <textarea
             className="input h-20 resize-y font-mono text-[12.5px]"
             placeholder="http://elasticsearch:9200"
@@ -204,13 +209,13 @@ export function AdminAuditPage() {
         </Field>
 
         <div>
-          <span className="eyebrow mb-1.5 block">Kimlik doğrulama</span>
+          <span className="eyebrow mb-1.5 block">{t('audit.auth')}</span>
           <div className="flex gap-1">
             {(
               [
                 ['none', 'Yok'],
-                ['basic', 'Kullanıcı/parola'],
-                ['apiKey', 'API anahtarı'],
+                ['basic', t('audit.authBasic')],
+                ['apiKey', t('audit.authApiKey')],
               ] as const
             ).map(([type, label]) => (
               <button
@@ -233,7 +238,7 @@ export function AdminAuditPage() {
 
         {form.auth.type === 'basic' && (
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Kullanıcı adı">
+            <Field label={t('audit.username')}>
               <input
                 className="input font-mono text-[12.5px]"
                 value={form.auth.username}
@@ -244,7 +249,7 @@ export function AdminAuditPage() {
             </Field>
             <Field
               label="Parola"
-              hint={form.hasSecret ? 'kayıtlı — değiştirmek için yazın' : undefined}
+              hint={form.hasSecret ? t('audit.secretStored') : undefined}
             >
               <input
                 type="password"
@@ -262,8 +267,8 @@ export function AdminAuditPage() {
 
         {form.auth.type === 'apiKey' && (
           <Field
-            label="API anahtarı"
-            hint={form.hasSecret ? 'kayıtlı — değiştirmek için yazın' : undefined}
+            label={t('audit.authApiKey')}
+            hint={form.hasSecret ? t('audit.secretStored') : undefined}
           >
             <input
               type="password"
@@ -276,7 +281,7 @@ export function AdminAuditPage() {
           </Field>
         )}
 
-        <Field label="CA sertifikası" hint="Kurum içi CA ile imzalı ES için PEM içeriği">
+        <Field label={t('audit.caCert')} hint={t('audit.caCertHint')}>
           <textarea
             className="input h-20 resize-y font-mono text-[11px]"
             placeholder="-----BEGIN CERTIFICATE-----"
@@ -296,24 +301,23 @@ export function AdminAuditPage() {
           <span className="text-[13px]">
             <span className="flex items-center gap-1.5 font-medium text-warn">
               <ShieldAlertIcon size={13} aria-hidden="true" />
-              TLS doğrulamasını atla
+              {t('audit.skipTls')}
             </span>
             <span className="mt-0.5 block text-fg-dim">
-              Yalnızca kurulum aşamasında açın. Açıkken denetim trafiği ortadaki adam
-              saldırısına karşı korumasız kalır.
+              {t('audit.skipTlsHint')}
             </span>
           </span>
         </label>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="İndeks öneki" hint="Günlük indeks: önek-YYYY.AA.GG">
+          <Field label={t('audit.indexPrefix')} hint={t('audit.indexPrefixHint')}>
             <input
               className="input font-mono text-[12.5px]"
               value={form.indexPrefix}
               onChange={(e) => update({ indexPrefix: e.target.value })}
             />
           </Field>
-          <Field label="Saklama süresi (gün)" hint="0 = otomatik silme yok">
+          <Field label={t('audit.retention')} hint={t('audit.retentionHint')}>
             <input
               className="input font-mono text-[12.5px]"
               inputMode="numeric"
@@ -350,7 +354,7 @@ export function AdminAuditPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <button type="submit" className="btn btn-primary" disabled={save.isPending}>
-            {saved ? 'Kaydedildi' : 'Kaydet'}
+            {saved ? t('audit.saved') : t('common.save')}
           </button>
           <button
             type="button"
@@ -359,16 +363,16 @@ export function AdminAuditPage() {
             disabled={test.isPending}
           >
             <PlugZapIcon size={13} />
-            {test.isPending ? 'Deneniyor…' : 'Bağlantıyı test et'}
+            {test.isPending ? t('audit.testing') : t('audit.testConnection')}
           </button>
           <button
             type="button"
             className="btn"
             onClick={() => retention.mutate()}
             disabled={retention.isPending || !form.enabled}
-            title="ILM politikasını ve indeks şablonunu kurar"
+            title={t('audit.retentionTitle')}
           >
-            Saklama politikasını uygula
+            {t('audit.applyRetention')}
           </button>
         </div>
       </form>

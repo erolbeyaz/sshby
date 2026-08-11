@@ -28,6 +28,7 @@ Bugün çalışan özellikler:
 - **Yapılandırma dışa/içe aktarma** — klasörler, sunucular ve kasa kayıtları tek
   bir JSON paketinde. Gizli veriler ya paketten tamamen çıkarılır ya da verdiğiniz
   paroladan türetilen anahtarla şifrelenir.
+- **İki dilli arayüz** — Türkçe ve İngilizce, üst bardan anında değişir
 
 Planlanan (henüz yok):
 

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowDownUpIcon, KeyRoundIcon, ServerIcon, ShieldIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { ConfigTransferDialog } from '@/components/dialogs/ConfigTransferDialog';
+import { useI18n } from '@/lib/i18n';
 import { useInventory } from '@/lib/queries';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTerminalStore } from '@/lib/terminal-store';
@@ -27,9 +29,11 @@ export function CommandPalette() {
   const inventory = useInventory();
   const role = useAuthStore((s) => s.user?.role);
   const navigate = useNavigate();
+  const { lang, t } = useI18n();
 
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [configOpen, setConfigOpen] = useState(false);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -68,42 +72,50 @@ export function CommandPalette() {
 
     items.push({
       id: 'nav-credentials',
-      label: 'Kimlik bilgileri',
-      hint: 'kasa',
+      label: t('palette.credentials'),
+      hint: t('palette.credentialsHint'),
       icon: <KeyRoundIcon size={14} />,
-      run: () => navigate('/kasa'),
+      run: () => navigate('/vault'),
     });
 
     items.push({
       id: 'nav-config',
-      label: 'Yapılandırma dışa / içe aktarma',
-      hint: 'yedek',
+      label: t('palette.config'),
+      hint: t('palette.configHint'),
       icon: <ArrowDownUpIcon size={14} />,
-      run: () => navigate('/yapilandirma'),
+      run: () => setConfigOpen(true),
     });
 
     if (role === 'admin') {
       items.push({
         id: 'nav-users',
-        label: 'Kullanıcı yönetimi',
-        hint: 'yönetim',
+        label: t('palette.users'),
+        hint: t('palette.usersHint'),
         icon: <ShieldIcon size={14} />,
-        run: () => navigate('/yonetim/kullanicilar'),
+        run: () => navigate('/admin/users'),
       });
     }
 
     return items;
-  }, [inventory.data, navigate, openTab, role, setSelectedHostId]);
+  }, [inventory.data, navigate, openTab, role, setSelectedHostId, t]);
 
   const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase('tr');
+    // Türkçe'de i/İ eşlemesi ayrı: arama küçültmesi arayüz diline uymalı.
+    const needle = query.trim().toLocaleLowerCase(lang);
     if (!needle) return commands.slice(0, 20);
     return commands
-      .filter((c) => `${c.label} ${c.hint ?? ''}`.toLocaleLowerCase('tr').includes(needle))
+      .filter((c) => `${c.label} ${c.hint ?? ''}`.toLocaleLowerCase(lang).includes(needle))
       .slice(0, 20);
-  }, [commands, query]);
+  }, [commands, lang, query]);
 
-  if (!open) return null;
+  /**
+   * Palet kapansa bile yapılandırma diyaloğu ayakta kalmalı: komut paletten
+   * seçildiğinde palet kendini kapatıyor ve diyalog onun içinde yaşasaydı
+   * aynı anda sökülürdü.
+   */
+  if (!open) {
+    return configOpen ? <ConfigTransferDialog onClose={() => setConfigOpen(false)} /> : null;
+  }
 
   function runAt(index: number) {
     const command = filtered[index];
@@ -123,7 +135,7 @@ export function CommandPalette() {
         <input
           autoFocus
           className="w-full border-b border-line bg-transparent px-4 py-3.5 font-mono text-[13px] text-fg outline-none placeholder:text-fg-dim"
-          placeholder="sunucu ara veya bir sayfaya git…"
+          placeholder={t('palette.placeholder')}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -148,7 +160,9 @@ export function CommandPalette() {
 
         <ul className="max-h-[50vh] overflow-y-auto p-1.5">
           {filtered.length === 0 && (
-            <li className="px-3 py-6 text-center text-[13px] text-fg-dim">Sonuç yok.</li>
+            <li className="px-3 py-6 text-center text-[13px] text-fg-dim">
+              {t('palette.noResult')}
+            </li>
           )}
           {filtered.map((command, index) => (
             <li key={command.id}>
@@ -173,6 +187,8 @@ export function CommandPalette() {
           ))}
         </ul>
       </div>
+
+      {configOpen && <ConfigTransferDialog onClose={() => setConfigOpen(false)} />}
     </div>
   );
 }

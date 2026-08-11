@@ -78,8 +78,23 @@ denetim katmanları değişmeden çalışır. Elle girilen gizli veri kasadakiyl
 zarf şifrelemesiyle saklanır ve 24 saat kullanılmazsa süpürülür. Geçici kayıtlar
 envanter ağacında ve kasada görünmez, sıralamaya da katılmaz.
 
-**Yapılandırma taşıma** (`/yapilandirma`) — klasör ağacı, sunucu envanteri ve
-kasa kayıtları tek bir JSON paketine yazılır. Gizli veri için iki kip:
+**Çok dillilik** — arayüz Türkçe ve İngilizce. Üst barda, hesap düğmesinin
+solunda TR/ENG seçici. Tercih `localStorage`da saklanır; seçim yapılmadıysa
+tarayıcının diline uyulur. Sözlükler `apps/web/src/lib/locales/` altında;
+İngilizce sözlük Türkçenin anahtar kümesiyle tiplendiği için eksik çeviri
+derlemeyi düşürür. API hata mesajları da çevrilir (sunucunun `code` alanına
+göre), tanınmayan kodda sunucu metnine düşülür.
+
+**URL yolları ve sekme başlıkları İngilizce** ve dilden bağımsız: `/`,
+`/vault`, `/server/:id`, `/admin/users`, `/admin/audit`. Eski Türkçe yollar
+(`/kasa`, `/sunucu/:id`, `/yonetim/*`) yönlendirme olarak korunuyor.
+
+**İmza** — "powered by erolbeyaz" her ekranda: oturum açıkken alt durum
+çubuğunda, giriş ekranında formun altında.
+
+**Yapılandırma taşıma** — hesap menüsünden (çıkışın hemen üstünde) ve komut
+paletinden açılan diyalog; her kullanıcı kendi verisiyle çalışır. Klasör ağacı,
+sunucu envanteri ve kasa kayıtları tek bir JSON paketine yazılır. Gizli veri için iki kip:
 **gizli veri hariç** (paylaşılabilir dosya) ya da **parola korumalı şifreli
 paket** (scrypt N=65536, r=8, p=2 → AES-256-GCM). Kasadaki zarf şifreleme
 kuruluma ve sahibe bağlı olduğu için gizli veri ham hâliyle taşınmaz; dışa
@@ -163,9 +178,14 @@ yazılması, UTF-8'in çerçeve sınırında bölünse bile bozulmaması.
   başka bir kuruluma taşımak, orada ilk bağlantı doğrulamasını kullanıcı
   görmeden atlatmak olurdu. İçe aktarılan sunucularda ilk bağlantıda parmak
   izi yeniden sorulur — bilinçli bir kısıt.
-- **Yapılandırma paketi arayüzü tarayıcıda elle doğrulanmadı.** API katmanı
-  uçtan uca test edildi (29/29) ve web tip denetimi/derlemesi geçti, ama
-  ekranın kendisi henüz kullanıcı tarafından görülmedi.
+- **Çeviri kapsamı arayüzle sınırlı.** Sunucudan gelen serbest metinler
+  (içe aktarma raporundaki uyarılar, denetim gönderici durum mesajları) Türkçe
+  üretiliyor ve İngilizce arayüzde de Türkçe görünüyor. Bunlar kayıt adları
+  içerdiği için şablonlanmaları gerekir; sabit `code` taşıyan hatalar zaten
+  çevriliyor.
+- **Arayüz değişiklikleri tarayıcıda elle doğrulanmadı.** Tip denetimi,
+  derleme ve dağıtılan paket içeriği doğrulandı; API tarafı 29/29 geçti. Dil
+  değiştirme, yapılandırma diyaloğu ve imzanın görsel teyidi kullanıcıda.
 - **Metrik panosu yalnızca anlık değer gösteriyor.** Zaman aralığı düğmeleri
   (1H/6H/24H/7D) ve sparkline geçmişi yapılmadı.
 - **Dosya gezgini geri düğmesi beklendiği gibi çalışmıyor.** Geçmiş yığını

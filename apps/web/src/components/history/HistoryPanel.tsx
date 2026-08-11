@@ -9,7 +9,8 @@ import {
   XIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { ApiRequestError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { localeTag, useApiError, useI18n } from '@/lib/i18n';
 
 interface HistoryEntry {
   sequence: number;
@@ -40,6 +41,8 @@ export function HistoryPanel({
   hostName: string;
   onClose: () => void;
 }) {
+  const { lang, t } = useI18n();
+  const apiError = useApiError();
   const [query, setQuery] = useState('');
   const [copied, setCopied] = useState<number | null>(null);
 
@@ -54,11 +57,11 @@ export function HistoryPanel({
   const entries = history.data?.entries ?? [];
 
   const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase('tr');
+    const needle = query.trim().toLocaleLowerCase(lang);
     return needle
-      ? entries.filter((entry) => entry.command.toLocaleLowerCase('tr').includes(needle))
+      ? entries.filter((entry) => entry.command.toLocaleLowerCase(lang).includes(needle))
       : entries;
-  }, [entries, query]);
+  }, [entries, lang, query]);
 
   async function copy(entry: HistoryEntry) {
     try {
@@ -79,8 +82,8 @@ export function HistoryPanel({
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={() => void history.refetch()}
-          aria-label="Yenile"
-          title="Yenile"
+          aria-label={t('history.refresh')}
+          title={t('history.refresh')}
         >
           <RefreshCwIcon size={13} className={clsx(history.isFetching && 'animate-spin')} />
         </button>
@@ -88,7 +91,7 @@ export function HistoryPanel({
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={onClose}
-          aria-label="Geçmiş panelini kapat"
+          aria-label={t('history.closePanel')}
         >
           <XIcon size={14} />
         </button>
@@ -102,17 +105,18 @@ export function HistoryPanel({
         />
         <input
           className="input py-1.5 pl-7 pr-2 font-mono text-[12px]"
-          placeholder="Geçmişte ara…"
+          placeholder={t('history.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Komut geçmişinde ara"
+          aria-label={t('history.searchAria')}
         />
       </div>
 
       <div className="flex shrink-0 items-center justify-between px-3 pb-1.5">
         <span className="font-mono text-[11px] text-fg-dim">
-          {filtered.length} komut
-          {query && entries.length !== filtered.length && ` (${entries.length} içinde)`}
+          {query && entries.length !== filtered.length
+            ? t('history.countFiltered', { n: filtered.length, total: entries.length })
+            : t('history.count', { n: filtered.length })}
         </span>
       </div>
 
@@ -120,27 +124,25 @@ export function HistoryPanel({
         {history.isPending && (
           <p className="flex items-center gap-2 px-1 py-4 font-mono text-[12px] text-fg-dim">
             <LoaderIcon size={13} className="animate-spin" aria-hidden="true" />
-            yükleniyor…
+            {t('common.loading')}
           </p>
         )}
 
         {history.isError && (
           <p className="px-1 py-4 text-[12.5px] text-danger">
-            {history.error instanceof ApiRequestError
-              ? history.error.message
-              : 'Geçmiş okunamadı.'}
+            {apiError(history.error, 'history.loadFailed')}
           </p>
         )}
 
         {history.data && filtered.length === 0 && (
           <p className="px-1 py-6 text-center text-[12.5px] leading-relaxed text-fg-dim">
             {query ? (
-              'Eşleşen komut yok.'
+              t('history.noMatch')
             ) : (
               <>
-                Bu sunucuda henüz komut çalıştırılmamış.
+                {t('history.empty')}
                 <br />
-                Terminal açıp komut yazdığınızda burada görünecek.
+                {t('history.emptyHint')}
               </>
             )}
           </p>
@@ -159,9 +161,9 @@ export function HistoryPanel({
             </code>
             <span
               className="shrink-0 font-mono text-[10px] text-fg-dim/70"
-              title={new Date(entry.at).toLocaleString('tr-TR')}
+              title={new Date(entry.at).toLocaleString(localeTag(lang))}
             >
-              {new Date(entry.at).toLocaleTimeString('tr-TR', {
+              {new Date(entry.at).toLocaleTimeString(localeTag(lang), {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
@@ -170,8 +172,8 @@ export function HistoryPanel({
               type="button"
               className="shrink-0 rounded p-1 text-fg-dim opacity-0 transition-opacity hover:text-accent focus-visible:opacity-100 group-hover:opacity-100"
               onClick={() => void copy(entry)}
-              aria-label={`${entry.sequence}. komutu kopyala`}
-              title={copied === entry.sequence ? 'Kopyalandı' : 'Kopyala'}
+              aria-label={t('history.copyAria', { n: entry.sequence })}
+              title={copied === entry.sequence ? t('history.copied') : t('history.copy')}
             >
               <CopyIcon size={11} className={clsx(copied === entry.sequence && 'text-accent')} />
             </button>
@@ -186,7 +188,7 @@ export function HistoryPanel({
         düğme koymak ise kullanıcıyı sildiğine inandırırdı.
       */}
       <p className="shrink-0 border-t border-line px-3 py-1.5 font-mono text-[10px] text-fg-dim">
-        denetim kaydından türetilir · silinemez
+        {t('history.footer')}
       </p>
     </div>
   );

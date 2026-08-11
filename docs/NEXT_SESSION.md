@@ -15,11 +15,18 @@ gerçek SSH bağlantısı kuruldu.
 
 Uygulama compose ile ayakta: http://localhost:8088
 
+Faz 7 sonrası ayrıca **arayüz iki dilli hale getirildi** (TR/ENG), URL yolları
+ve sekme başlıkları İngilizceye çevrildi, yapılandırma aktarımı ayrı sayfadan
+hesap menüsündeki diyaloğa taşındı ve "powered by erolbeyaz" imzası eklendi.
+
 ## Şu anda eksik olan
 
-- **Yapılandırma ekranı tarayıcıda elle görülmedi.** API uçtan uca test edildi,
-  web tip denetimi ve derlemesi geçti, ama `/yapilandirma` sayfası görsel olarak
-  doğrulanmadı. Kullanıcıdan teyit istenmeli.
+- **Arayüz tarayıcıda elle görülmedi.** Tip denetimi, derleme ve dağıtılan
+  paket içeriği doğrulandı, API 29/29 geçti; dil değiştirme, yapılandırma
+  diyaloğu ve imzanın görsel teyidi kullanıcıda.
+- **Sunucudan gelen serbest metinler çevrilmiyor** — içe aktarma raporundaki
+  uyarılar ve gönderici durum mesajları Türkçe üretiliyor. Kayıt adları
+  içerdikleri için şablonlanmaları gerekir.
 - **Kibana örnek panosu** — Faz 6'dan kalan tek iş. Veri `sshby-audit-*` içinde
   akıyor ama hazır görselleştirme yok.
 - **Helm chart yok** — `deploy/helm` dizini henüz oluşturulmadı.

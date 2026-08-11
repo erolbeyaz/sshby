@@ -41,9 +41,10 @@ apps/
     src/
       components/     layout/, terminal/, sftp/, metrics/, history/, tree/,
                       dialogs/, ui/, brand/
-      lib/            api istemcisi, zustand store'ları, react-query kancaları
+      lib/            api istemcisi, zustand store'ları, react-query kancaları,
+                      i18n katmanı ve locales/ sözlükleri
       pages/          AuthPage, HomePage, HostDetailPage, CredentialsPage,
-                      ConfigTransferPage, AdminUsersPage, AdminAuditPage
+                      AdminUsersPage, AdminAuditPage
 packages/
   shared/             api ↔ web arasında zod sözleşmeleri (tek doğruluk kaynağı)
 deploy/
@@ -207,3 +208,25 @@ olmayan panel gizlenir, DOM'dan çıkarılmaz.
 
 Terminal, dosya, metrik ve geçmiş panelleri birbirinden **bağımsız** sekme
 listeleridir; biri kapanınca diğerleri etkilenmez.
+
+## Çok dillilik
+
+```
+locales/tr.ts  ──► anahtar kümesinin kaynağı
+locales/en.ts  ──► Record<keyof typeof tr, string>  (eksik anahtar = derleme hatası)
+        │
+   I18nProvider (localStorage + navigator.language)
+        │
+   useT() ──► t('vault.usedBy', { n: 3 })
+```
+
+`I18nProvider` yönlendiricinin ve react-query'nin dışında, `main.tsx` içinde
+oturuyor; dil değişimi tüm ağacı yeniden çizer ama hiçbir bağlantıyı koparmaz.
+
+Bileşenler metni asla gömmez. Üç kural:
+
+- **URL ve `<title>` İngilizce**, dilden bağımsız (`useDocumentTitle`).
+- **API hataları `useApiError()` ile çevrilir** — sunucunun `code` alanı
+  `error.<code>` anahtarına eşlenir, tanınmayan kodda sunucu metnine düşülür.
+- **`t` efekt bağımlılığı olamaz.** SSH bağlantısını kuran efektlerde ref
+  üzerinden erişilir; yoksa dil seçmek açık oturumları koparır.

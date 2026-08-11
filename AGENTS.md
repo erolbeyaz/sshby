@@ -42,9 +42,41 @@ Bir dokümandaki eski bilgiyi diğerlerine yayarak çelişkiyi "çözmeye" çal�
 
 ## Dil
 
-Kod yorumları, kullanıcıya görünen tüm metinler, hata mesajları ve commit
-mesajları **Türkçe**. Değişken/fonksiyon adları İngilizce (kod tabanının geri
-kalanıyla tutarlı olsun diye).
+**Kod yorumları ve commit mesajları Türkçe.** Değişken/fonksiyon adları
+İngilizce (kod tabanının geri kalanıyla tutarlı olsun diye).
+
+**Arayüz iki dilli: Türkçe ve İngilizce.** Kullanıcıya görünen hiçbir metin
+bileşenin içine gömülmez; hepsi sözlükten gelir:
+
+- `apps/web/src/lib/locales/tr.ts` — anahtar kümesinin tek doğruluk kaynağı
+- `apps/web/src/lib/locales/en.ts` — `tr`nin anahtarlarıyla tiplenmiş
+
+Bir anahtar Türkçeye eklenip İngilizcesi yazılmazsa **`pnpm typecheck` düşer**;
+eksik çeviri çalışma zamanına kalmaz. Bileşende `useT()` ile kullanılır:
+
+```tsx
+const t = useT();
+<button aria-label={t('vault.deleteAria', { name: cred.name })}>
+```
+
+Uyulması gerekenler:
+
+- Yeni bir kullanıcı metni yazarken önce sözlüğe anahtar ekleyin. `aria-label`,
+  `title` ve `placeholder` da kullanıcı metnidir.
+- **URL yolları ve `<title>` her zaman İngilizce**, dilden bağımsız. Gerekçe:
+  `DECISIONS.md` → Çok dillilik.
+- **API hata mesajları arayüzde çevrilir.** Sunucu sabit bir `code` gönderiyor;
+  `useApiError()` bunu `error.<code>` anahtarına eşliyor. Yeni bir hata kodu
+  eklediğinizde sözlüğe de ekleyin — yoksa kullanıcı sunucunun Türkçe metnini
+  görür (bilinçli geri düşüş, ama İngilizce arayüzde tutarsız durur).
+- Tarih/saat biçimlendirmesinde `localeTag(lang)` kullanın, sabit `'tr-TR'`
+  değil.
+- **Efekt bağımlılıklarına dikkat:** `t` dil değiştiğinde yeni referans alır.
+  SSH oturumu kuran efektlerde bağımlılık olarak vermeyin; `TerminalPane`
+  içindeki `tRef` desenini izleyin — yoksa dil seçmek açık oturumları koparır.
+
+Sunucu tarafındaki metinler (API hata mesajları, denetim uyarıları) Türkçe
+kalır; çeviri katmanı yalnızca arayüzde.
 
 ## ⚠ Veritabanı testte paylaşılıyor
 

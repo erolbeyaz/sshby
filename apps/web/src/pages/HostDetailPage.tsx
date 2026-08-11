@@ -2,14 +2,17 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangleIcon, KeyRoundIcon, PencilIcon, TerminalIcon } from 'lucide-react';
 import { HostDialog } from '@/components/dialogs/HostDialog';
+import { useT } from '@/lib/i18n';
 import { useCredentials, useInventory } from '@/lib/queries';
 import { useTerminalStore } from '@/lib/terminal-store';
+import { useDocumentTitle } from '@/lib/use-document-title';
 
 /**
  * Sunucu ayrıntısı. Ağaçta tek tıklama buraya getirir; bağlanma bilinçli bir
  * eylem olarak burada ya da çift tıklamayla yapılır.
  */
 export function HostDetailPage() {
+  const t = useT();
   const { hostId } = useParams<{ hostId: string }>();
   const navigate = useNavigate();
   const inventory = useInventory();
@@ -20,15 +23,17 @@ export function HostDetailPage() {
   const host = inventory.data?.hosts.find((h) => h.id === hostId);
   const folders = inventory.data?.folders ?? [];
 
+  useDocumentTitle(host ? `Server · ${host.name}` : 'Server');
+
   if (inventory.isPending) {
-    return <p className="px-8 py-12 font-mono text-[13px] text-fg-dim">yükleniyor…</p>;
+    return <p className="px-8 py-12 font-mono text-[13px] text-fg-dim">{t('common.loading')}</p>;
   }
 
   if (!host) {
     return (
       <div className="mx-auto max-w-3xl px-8 py-12">
-        <h1 className="text-[22px] font-semibold">Sunucu bulunamadı</h1>
-        <p className="mt-2 text-fg-dim">Bu kayıt silinmiş olabilir.</p>
+        <h1 className="text-[22px] font-semibold">{t('host.notFound')}</h1>
+        <p className="mt-2 text-fg-dim">{t('host.notFoundHint')}</p>
       </div>
     );
   }
@@ -52,7 +57,7 @@ export function HostDetailPage() {
     <div className="mx-auto max-w-3xl px-8 py-12">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="eyebrow">Sunucu</p>
+          <p className="eyebrow">{t('host.eyebrow')}</p>
           <h1 className="mt-2 truncate font-mono text-[26px] font-extrabold tracking-tight">
             {host.name}
           </h1>
@@ -64,7 +69,7 @@ export function HostDetailPage() {
         <div className="flex shrink-0 gap-2">
           <button type="button" className="btn" onClick={() => setEditing(true)}>
             <PencilIcon size={13} />
-            Düzenle
+            {t('common.edit')}
           </button>
           <button
             type="button"
@@ -74,13 +79,13 @@ export function HostDetailPage() {
             title={
               canConnect
                 ? credential
-                  ? 'Terminal aç'
-                  : 'Terminal aç — parola bağlanırken sorulacak'
-                : 'Önce bir SSH kullanıcı adı belirleyin'
+                  ? t('host.openTerminalTitle')
+                  : t('host.openTerminalAskPassword')
+                : t('host.needUsername')
             }
           >
             <TerminalIcon size={13} />
-            Bağlan
+            {t('host.connect')}
           </button>
         </div>
       </div>
@@ -99,14 +104,11 @@ export function HostDetailPage() {
         <div className="mt-6 flex items-start gap-3 rounded-panel border border-warn/40 bg-warn/10 px-4 py-3.5">
           <AlertTriangleIcon size={16} className="mt-0.5 shrink-0 text-warn" aria-hidden="true" />
           <div className="text-[13px] leading-relaxed">
-            <p className="font-medium text-warn">SSH kullanıcı adı yok</p>
-            <p className="mt-1 text-fg-dim">
-              Bağlanmak için bir kullanıcı adı gerekiyor. Sunucuyu düzenleyip yazın ya da
-              kullanıcı adı taşıyan bir kimlik bilgisi atayın.
-            </p>
+            <p className="font-medium text-warn">{t('host.noUsernameTitle')}</p>
+            <p className="mt-1 text-fg-dim">{t('host.noUsernameBody')}</p>
             <button type="button" className="btn mt-3" onClick={() => setEditing(true)}>
               <PencilIcon size={13} />
-              Sunucuyu düzenle
+              {t('host.editHost')}
             </button>
           </div>
         </div>
@@ -116,21 +118,18 @@ export function HostDetailPage() {
         <div className="mt-6 flex items-start gap-3 rounded-panel border border-line bg-surface px-4 py-3.5">
           <KeyRoundIcon size={16} className="mt-0.5 shrink-0 text-fg-dim" aria-hidden="true" />
           <div className="text-[13px] leading-relaxed">
-            <p className="font-medium">Kimlik bilgisi atanmamış</p>
-            <p className="mt-1 text-fg-dim">
-              Bağlanabilirsiniz — parola her bağlantıda sorulur ve kaydedilmez. Her seferinde
-              sorulmasını istemiyorsanız kasadan bir kayıt atayın.
-            </p>
+            <p className="font-medium">{t('host.noCredentialTitle')}</p>
+            <p className="mt-1 text-fg-dim">{t('host.noCredentialBody')}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {credentials.data && credentials.data.length > 0 ? (
                 <button type="button" className="btn" onClick={() => setEditing(true)}>
                   <PencilIcon size={13} />
-                  Kimlik bilgisi seç
+                  {t('host.pickCredential')}
                 </button>
               ) : (
-                <Link to="/kasa" className="btn">
+                <Link to="/vault" className="btn">
                   <KeyRoundIcon size={13} />
-                  Kasaya kayıt ekle
+                  {t('host.addToVault')}
                 </Link>
               )}
             </div>
@@ -139,26 +138,26 @@ export function HostDetailPage() {
       )}
 
       <section className="panel mt-6 p-5">
-        <h2 className="eyebrow mb-4">Bağlantı</h2>
+        <h2 className="eyebrow mb-4">{t('host.connectionSection')}</h2>
         <dl className="grid grid-cols-[140px_1fr] gap-x-6 gap-y-2.5 font-mono text-[13px]">
-          <dt className="text-fg-dim">kimlik</dt>
+          <dt className="text-fg-dim">{t('host.credential')}</dt>
           <dd>
             {credential ? (
               <>
                 {credential.name}{' '}
                 <span className="text-fg-dim">
-                  ({credential.type === 'password' ? 'parola' : 'anahtar'})
+                  ({credential.type === 'password' ? t('vault.typePassword') : t('vault.typeKey')})
                 </span>
               </>
             ) : (
-              <span className="text-warn">seçilmedi</span>
+              <span className="text-warn">{t('host.noneSelected')}</span>
             )}
           </dd>
 
-          <dt className="text-fg-dim">klasör</dt>
-          <dd>{folders.find((f) => f.id === host.folderId)?.name ?? '— kök seviye —'}</dd>
+          <dt className="text-fg-dim">{t('host.folder')}</dt>
+          <dd>{folders.find((f) => f.id === host.folderId)?.name ?? t('host.rootLevel')}</dd>
 
-          <dt className="text-fg-dim">varsayılan dizin</dt>
+          <dt className="text-fg-dim">{t('host.defaultPath')}</dt>
           <dd>{host.defaultPath ?? '~'}</dd>
         </dl>
       </section>

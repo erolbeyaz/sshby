@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ClipboardPasteIcon, CopyIcon, EraserIcon, TextSelectIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { useT } from '@/lib/i18n';
 
 interface MenuProps {
   x: number;
@@ -24,6 +25,7 @@ export function TerminalContextMenu({
   onSelectAll,
   onClear,
 }: MenuProps) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
 
@@ -80,28 +82,24 @@ export function TerminalContextMenu({
     >
       <Item
         icon={<CopyIcon size={13} />}
-        label="Kopyala"
+        label={t('ctx.copy')}
         shortcut="Ctrl+C"
         disabled={!hasSelection}
         onClick={() => run(onCopy)}
       />
       <Item
         icon={<ClipboardPasteIcon size={13} />}
-        label="Yapıştır"
+        label={t('ctx.paste')}
         shortcut="Ctrl+V"
         onClick={() => run(onPaste)}
       />
       <div className="my-1 border-t border-line" />
       <Item
         icon={<TextSelectIcon size={13} />}
-        label="Tümünü seç"
+        label={t('ctx.selectAll')}
         onClick={() => run(onSelectAll)}
       />
-      <Item
-        icon={<EraserIcon size={13} />}
-        label="Ekranı temizle"
-        onClick={() => run(onClear)}
-      />
+      <Item icon={<EraserIcon size={13} />} label={t('ctx.clear')} onClick={() => run(onClear)} />
     </div>
   );
 }

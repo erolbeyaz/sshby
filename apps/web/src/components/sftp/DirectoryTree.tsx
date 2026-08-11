@@ -1,5 +1,6 @@
 import { ChevronRightIcon, FolderIcon, FolderOpenIcon, LoaderIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { useT } from '@/lib/i18n';
 import { useSftpList } from '@/lib/sftp-queries';
 
 /**
@@ -62,6 +63,7 @@ function TreeNode({
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
 }) {
+  const t = useT();
   const isOpen = expanded.has(path);
   // `enabled` kapalıyken sorgu hiç çalışmaz — kapalı dalları getirmiyoruz.
   const listing = useSftpList(isOpen ? hostId : null, path, sudo);
@@ -84,7 +86,7 @@ function TreeNode({
           type="button"
           className="shrink-0 rounded p-0.5 hover:text-fg"
           onClick={() => onToggle(path)}
-          aria-label={isOpen ? 'Kapat' : 'Aç'}
+          aria-label={isOpen ? t('dirtree.collapse') : t('dirtree.expand')}
           aria-expanded={isOpen}
         >
           <ChevronRightIcon
@@ -121,7 +123,7 @@ function TreeNode({
               className="py-0.5 font-mono text-[10.5px] text-danger/80"
               style={{ paddingLeft: (depth + 1) * 12 + 20 }}
             >
-              erişilemedi
+              {t('dirtree.unreachable')}
             </p>
           )}
           {listing.data && directories.length === 0 && !listing.isFetching && (
@@ -129,7 +131,7 @@ function TreeNode({
               className="py-0.5 font-mono text-[10.5px] text-fg-dim/50"
               style={{ paddingLeft: (depth + 1) * 12 + 20 }}
             >
-              alt dizin yok
+              {t('dirtree.noSubdirs')}
             </p>
           )}
           {directories.map((entry) => (

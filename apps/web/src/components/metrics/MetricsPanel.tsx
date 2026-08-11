@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { MetricsSnapshot } from '@sshby/shared';
-import { ApiRequestError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { localeTag, useApiError, useI18n } from '@/lib/i18n';
 
 function formatBytes(bytes: number, digits = 1): string {
   if (bytes <= 0) return '0';
@@ -127,6 +128,8 @@ export function MetricsPanel({
   hostName: string;
   onClose: () => void;
 }) {
+  const { lang, t } = useI18n();
+  const apiError = useApiError();
   const [live, setLive] = useState(true);
   const [mountIndex, setMountIndex] = useState(0);
 
@@ -148,7 +151,7 @@ export function MetricsPanel({
       <div className="flex h-full items-center justify-center bg-bg">
         <p className="flex items-center gap-2 font-mono text-[13px] text-fg-dim">
           <LoaderIcon size={14} className="animate-spin" aria-hidden="true" />
-          metrikler toplanıyor…
+          {t('metrics.collecting')}
         </p>
       </div>
     );
@@ -157,14 +160,10 @@ export function MetricsPanel({
   if (metrics.isError || !data) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-bg px-6 text-center">
-        <p className="text-[13px] text-danger">
-          {metrics.error instanceof ApiRequestError
-            ? metrics.error.message
-            : 'Metrikler alınamadı.'}
-        </p>
+        <p className="text-[13px] text-danger">{apiError(metrics.error, 'metrics.loadFailed')}</p>
         <button type="button" className="btn" onClick={() => void metrics.refetch()}>
           <RefreshCwIcon size={13} />
-          Yeniden dene
+          {t('metrics.retry')}
         </button>
       </div>
     );
@@ -188,17 +187,17 @@ export function MetricsPanel({
           )}
           onClick={() => setLive((v) => !v)}
           aria-pressed={live}
-          title={live ? '5 saniyede bir yenileniyor' : 'Otomatik yenileme kapalı'}
+          title={live ? t('metrics.liveTitle') : t('metrics.pausedTitle')}
         >
-          {live ? 'canlı' : 'duraklatıldı'}
+          {live ? t('metrics.live') : t('metrics.paused')}
         </button>
 
         <button
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={() => void metrics.refetch()}
-          aria-label="Yenile"
-          title="Yenile"
+          aria-label={t('history.refresh')}
+          title={t('history.refresh')}
         >
           <RefreshCwIcon size={13} className={clsx(metrics.isFetching && 'animate-spin')} />
         </button>
@@ -206,7 +205,7 @@ export function MetricsPanel({
           type="button"
           className="btn-ghost rounded p-1.5"
           onClick={onClose}
-          aria-label="Metrik panelini kapat"
+          aria-label={t('metrics.closePanel')}
         >
           <XIcon size={14} />
         </button>
@@ -215,7 +214,7 @@ export function MetricsPanel({
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           {/* ------------------------------------------------------- CPU */}
-          <Card icon={CpuIcon} title="CPU kullanımı">
+          <Card icon={CpuIcon} title={t('metrics.cpu')}>
             <div className="flex items-center gap-4">
               <Gauge percent={data.cpu.usagePercent} label={`${data.cpu.cores} çekirdek`} />
               <div className="min-w-0 flex-1">
@@ -227,7 +226,7 @@ export function MetricsPanel({
           </Card>
 
           {/* ---------------------------------------------------- bellek */}
-          <Card icon={MemoryStickIcon} title="Bellek kullanımı">
+          <Card icon={MemoryStickIcon} title={t('metrics.memory')}>
             <div className="flex items-center gap-4">
               <Gauge percent={data.memory.percent} label="bellek" />
               <div className="min-w-0 flex-1">
@@ -235,7 +234,7 @@ export function MetricsPanel({
                   label="bellek"
                   value={`${formatBytes(data.memory.usedBytes)} / ${formatBytes(data.memory.totalBytes)}`}
                 />
-                <Row label="boş" value={formatBytes(data.memory.freeBytes)} />
+                <Row label={t('metrics.memFree')} value={formatBytes(data.memory.freeBytes)} />
                 <Row
                   label="takas"
                   value={
@@ -251,14 +250,14 @@ export function MetricsPanel({
           {/* ------------------------------------------------------ disk */}
           <Card
             icon={HardDriveIcon}
-            title="Disk kullanımı"
+            title={t('metrics.disk')}
             action={
               data.storage.length > 1 && (
                 <select
                   className="rounded border border-line bg-bg px-1.5 py-0.5 font-mono text-[10.5px] text-fg-dim"
                   value={mountIndex}
                   onChange={(e) => setMountIndex(Number(e.target.value))}
-                  aria-label="Bağlama noktası"
+                  aria-label={t('metrics.mountPoint')}
                 >
                   {data.storage.map((mount, index) => (
                     <option key={mount.mount} value={index}>
@@ -277,18 +276,18 @@ export function MetricsPanel({
                     label={disk.mount}
                     value={`${formatBytes(disk.usedBytes)} / ${formatBytes(disk.totalBytes)}`}
                   />
-                  <Row label="kullanılabilir" value={formatBytes(disk.availableBytes)} />
+                  <Row label={t('metrics.diskAvailable')} value={formatBytes(disk.availableBytes)} />
                 </div>
               </div>
             ) : (
-              <p className="text-[12px] text-fg-dim">Disk bilgisi okunamadı.</p>
+              <p className="text-[12px] text-fg-dim">{t('metrics.diskUnreadable')}</p>
             )}
           </Card>
 
           {/* -------------------------------------------------- ağ / süre */}
-          <Card icon={NetworkIcon} title="Ağ arayüzleri">
+          <Card icon={NetworkIcon} title={t('metrics.network')}>
             {data.network.length === 0 && (
-              <p className="text-[12px] text-fg-dim">Arayüz bulunamadı.</p>
+              <p className="text-[12px] text-fg-dim">{t('metrics.noInterfaces')}</p>
             )}
             {data.network.map((iface) => (
               <div
@@ -320,7 +319,7 @@ export function MetricsPanel({
             ))}
           </Card>
 
-          <Card icon={TimerIcon} title="Çalışma süresi">
+          <Card icon={TimerIcon} title={t('metrics.uptime')}>
             <div className="font-mono text-[26px] font-bold tracking-tight text-accent">
               {formatUptime(data.system.uptimeSeconds)}
             </div>
@@ -329,12 +328,12 @@ export function MetricsPanel({
             </p>
           </Card>
 
-          <Card icon={InfoIcon} title="Sistem bilgisi">
-            <Row label="sunucu adı" value={data.system.hostname} />
-            <Row label="işletim sistemi" value={data.system.operatingSystem} />
-            <Row label="çekirdek" value={data.system.kernel} />
+          <Card icon={InfoIcon} title={t('metrics.system')}>
+            <Row label={t('metrics.hostname')} value={data.system.hostname} />
+            <Row label={t('metrics.os')} value={data.system.operatingSystem} />
+            <Row label={t('metrics.kernel')} value={data.system.kernel} />
             <Row
-              label="sıcaklık"
+              label={t('metrics.temperature')}
               value={
                 data.temperatureCelsius === null
                   ? 'N/A'
@@ -344,10 +343,12 @@ export function MetricsPanel({
           </Card>
 
           {/* -------------------------------------------------- işlemler */}
-          <Card icon={ActivityIcon} title="İşlemler" className="lg:col-span-2">
+          <Card icon={ActivityIcon} title={t('metrics.processes')} className="lg:col-span-2">
             <p className="mb-2 font-mono text-[11px] text-fg-dim">
-              <span className="text-fg">{data.processCount.total}</span> toplam ·{' '}
-              <span className="text-fg">{data.processCount.running}</span> çalışan
+              <span className="text-fg">{data.processCount.total}</span>{' '}
+              {t('metrics.processTotal')} ·{' '}
+              <span className="text-fg">{data.processCount.running}</span>{' '}
+              {t('metrics.processRunning')}
             </p>
             {data.processes.map((process, index) => (
               <div
@@ -365,9 +366,9 @@ export function MetricsPanel({
           </Card>
 
           {/* ------------------------------------------------- girişler */}
-          <Card icon={LogInIcon} title="SSH giriş istatistikleri">
+          <Card icon={LogInIcon} title={t('metrics.sshLogins')}>
             {data.logins.length === 0 && (
-              <p className="text-[12px] text-fg-dim">Kayıt bulunamadı.</p>
+              <p className="text-[12px] text-fg-dim">{t('metrics.noLogins')}</p>
             )}
             {data.logins.map((login, index) => (
               <div key={index} className="border-b border-line/40 py-1 last:border-0">
@@ -381,9 +382,9 @@ export function MetricsPanel({
           </Card>
 
           {/* --------------------------------------------------- portlar */}
-          <Card icon={PlugIcon} title="Dinlenen portlar" className="lg:col-span-2">
+          <Card icon={PlugIcon} title={t('metrics.ports')} className="lg:col-span-2">
             {data.ports.length === 0 && (
-              <p className="text-[12px] text-fg-dim">Port bilgisi okunamadı.</p>
+              <p className="text-[12px] text-fg-dim">{t('metrics.portsUnreadable')}</p>
             )}
             <div className="grid grid-cols-2 gap-x-6">
               {data.ports.map((port, index) => (
@@ -405,7 +406,7 @@ export function MetricsPanel({
             </div>
           </Card>
 
-          <Card icon={ThermometerIcon} title="Sıcaklık">
+          <Card icon={ThermometerIcon} title={t('metrics.tempTitle')}>
             <div className="font-mono text-[26px] font-bold">
               {data.temperatureCelsius === null
                 ? 'N/A'
@@ -413,14 +414,16 @@ export function MetricsPanel({
             </div>
             <p className="mt-1 text-[11px] text-fg-dim">
               {data.temperatureCelsius === null
-                ? 'Bu sunucuda sensör okunamıyor (sanal makinelerde olağan).'
-                : 'En yüksek sıcaklık'}
+                ? t('metrics.noSensor')
+                : t('metrics.maxTemp')}
             </p>
           </Card>
         </div>
 
         <p className="mt-3 text-center font-mono text-[10px] text-fg-dim">
-          son toplama: {new Date(data.collectedAt).toLocaleTimeString('tr-TR')}
+          {t('metrics.lastCollected', {
+            time: new Date(data.collectedAt).toLocaleTimeString(localeTag(lang)),
+          })}
         </p>
       </div>
     </div>

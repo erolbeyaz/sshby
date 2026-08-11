@@ -239,6 +239,50 @@ bilgisiz gelen sunucuları söylememek, kullanıcının sorunu ancak bağlanmaya
 ile indirtmek parolayı taşıyan isteği bir gezinmeye çevirir; hata durumunda
 kullanıcı JSON hata gövdesini dosya olarak indirmiş olurdu.
 
+## Çok dillilik
+
+**Hazır i18n kütüphanesi yerine ~90 satırlık kendi katmanı.** İhtiyaç iki dil,
+düz anahtarlar ve basit değişken yerleştirmeden ibaret. react-i18next birkaç
+yüz kilobayt, kendi yükleyici/namespace modeli ve çalışma zamanında sessizce
+eksik anahtar davranışı getiriyordu.
+
+**Eksik çeviri derleme hatası.** `en` sözlüğü `tr`nin anahtar kümesiyle
+tiplenmiş (`Record<keyof typeof tr, string>`). Bir anahtar eklenip çevrilmezse
+`typecheck` düşer. Çalışma zamanında anahtar adını göstermek, hatayı
+kullanıcının bulmasına bırakmak olurdu.
+
+**URL yolları ve sekme başlıkları her zaman İngilizce.** Adres çubuğu, yer
+imleri, paylaşılan bağlantılar ve hata raporları uygulamanın dışına taşan
+yüzeyler; kullanıcının o anki dil seçimine göre değişmeleri bu kayıtları
+tutarsız kılardı. Türkçe yollar (`/kasa`, `/yonetim/*`) yönlendirme olarak
+korunuyor — yer imi olan kullanıcı 404 görmemeli.
+
+**API hata mesajları istemcide çevrilir.** Sunucu her hatada sabit bir `code`
+gönderiyor; metni arayüzde seçmek dil değiştiğinde hatanın da değişmesini
+sağlıyor. Alternatif — sunucuya `Accept-Language` sözlüğü koymak — ikinci bir
+çeviri katmanı ve ~490 mesajın iki dilde bakımı demekti. Tanınmayan kodda
+sunucunun kendi mesajına düşülür: yeni bir hata eklendiğinde kullanıcı boş
+ekran değil, en azından Türkçe bir açıklama görür.
+
+**Dil tercihi `localStorage`da, kullanıcı kaydında değil.** Tercih tarayıcıya
+ait bir görüntüleme ayarı; veritabanına yazmak migration ve bir uç noktası
+gerektirirdi. Seçim yapılmadıysa tarayıcının diline uyulur, seçim yapıldığı
+anda kaydedilir ve bir daha tarayıcıya bakılmaz.
+
+**Dil düğmeleri kendi dillerinde yazılı.** İngilizce arayüzde bile "TR"
+görünür: dil adları çevrilmez, çünkü kullanıcı anlamadığı bir arayüzde kendi
+dilini arıyor olabilir.
+
+**`t` efekt bağımlılığı olamaz.** Dil değiştiğinde `t` yeni referans alıyor;
+SSH bağlantısını kuran efektin bağımlılığı olsaydı dil seçmek tüm açık
+oturumları koparırdı. `TerminalPane` çeviri işlevini ref'te tutuyor — aynı
+dosyadaki `copyRef`/`pasteRef` deseninin nedeni de buydu.
+
+**Yapılandırma aktarımı sayfa değil, hesap menüsünde diyalog.** Taşınan şey
+kullanıcının kendi envanteri ve kasası; bir uygulama bölümü değil hesap
+işlemi. Çıkışın hemen üstünde duruyor ve rol koşulu yok — her kullanıcı kendi
+verisini aktarır.
+
 ## Sonradan düzeltilenler (tekrarlanmasın)
 
 | hata | kök neden |
